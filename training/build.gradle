@@ -1,0 +1,41 @@
+// "basic" configuration in it
+
+apply plugin: 'groovy'
+apply plugin: 'java'
+
+group 'de.dfki.mary'
+version '0.5.2-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:2.2"
+}
+
+
+import groovy.json.* // To load the JSON configuration file
+import java.util.*
+
+
+def slurper = new JsonSlurper()
+def config_file =  new File(System.getProperty("configuration"))
+def config = slurper.parseText( config_file.text )
+
+
+apply plugin: "de.dfki.mary.htsvoicebuilding"
+
+(new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
+    project(":$basename") {
+        buildDir = project.parent.buildDir
+        apply plugin: "de.dfki.mary.coefficientextraction"
+    }
+}
+
+task prepareData() {
+    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
+        dependsOn ":${basename}:generateCMP"
+    }
+}

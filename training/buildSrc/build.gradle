@@ -1,0 +1,40 @@
+apply plugin: 'groovy'
+
+evaluationDependsOnChildren()
+
+allprojects {
+    repositories {
+        jcenter()
+        // ivy {
+        //     url "${project(':marytts').projectDir}/lib/repo"
+        //     layout 'maven'
+        // }
+    }
+}
+
+project(':gradle-acoustic-parameter-extraction-plugin') {
+    dependencies {
+        compile "com.googlecode.json-simple:json-simple:1.1"
+        compile group: 'com.googlecode.efficient-java-matrix-library', name: 'core', version: '0.26'
+
+// compile project(':marytts:marytts-runtime')
+        // runtime project(':marytts:marytts-languages').subprojects
+    }
+}
+
+dependencies {
+    runtime project(':gradle-acoustic-parameter-extraction-plugin')
+}
+
+project(':gradle-hts-voicebuilding-plugin') {
+    dependencies {
+        // compile project(':marytts:marytts-runtime')
+        // runtime project(':marytts:marytts-languages').subprojects
+    }
+}
+
+dependencies {
+    runtime project(':gradle-hts-voicebuilding-plugin')
+}
+
+// build.dependsOn project(':marytts').publishToProjectLocal

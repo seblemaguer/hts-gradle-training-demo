@@ -1,0 +1,2 @@
+include 'gradle-hts-voicebuilding-plugin'
+include 'gradle-acoustic-parameter-extraction-plugin'
