@@ -1,0 +1,26 @@
+* Experiments
+:PROPERTIES:
+:CATEGORY: experiment
+:END:
+** DONE Initialize repository
+** DONE Generate labels
+** DONE Adapt alphabet : see label-full.awk & label-mono.awk
+SCHEDULED: <2016-09-06 Tue>
+** TODO Train acoustic part
+SCHEDULED: <2016-09-06 Tue>
+** TODO Adapt gradle-extraction-plugin to integrate EMA
+DEADLINE: <2016-10-07 Fri>
+** DELEGATED See how to extract EMA
+DEADLINE: <2016-10-06 Thu>
+** TODO Integrate the synthesis part
+SCHEDULED: <2016-09-07 Wed>
+** TODO Check the acoustic modelling
+SCHEDULED: <2016-09-06 Tue>
+** TODO Apply evaluation methodology
+SCHEDULED: <2016-09-20 Tue>
+* Paper
+:PROPERTIES:
+:CATEGORY: Paper
+:END:
+** Special Issue on Biosignal-based Spoken Communication
+DEADLINE: <2016-11-30 Wed>
