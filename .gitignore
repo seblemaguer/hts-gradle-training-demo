@@ -1,6 +1,6 @@
 ### Gradle ###
 .gradle
-/build/
+build/
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -16,7 +16,7 @@ gradle-app.setting
 
 
 ### Corpus ###
-corpus
+src
 
 ### Utils ###
 utils
