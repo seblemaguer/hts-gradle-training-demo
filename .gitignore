@@ -6,6 +6,7 @@ build/
 gradle-app.setting
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+*.jar
 !gradle-wrapper.jar
 
 # Cache of project
@@ -20,3 +21,6 @@ src
 
 ### Utils ###
 utils
+
+### Marytts ###
+log

@@ -1,0 +1,5 @@
+def corpus_name = System.getProperty("corpus_name")
+(new File("src/$corpus_name/list_basenames")).eachLine{ basename ->
+    (new File("tmp/$basename")).mkdirs()
+    include "tmp/$basename"
+}

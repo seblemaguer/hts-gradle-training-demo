@@ -1,0 +1,317 @@
+buildscript {
+    repositories {
+        jcenter()
+        mavenLocal()
+        maven {
+            url 'https://oss.jfrog.org/artifactory/repo'
+        }
+        // maven {
+        //     url "http://dl.bintray.com/slemaguer/maven"
+        // }
+    }
+
+    dependencies {
+        classpath group: "de.dfki.mary", name: "marytts-hts", version: "0.2.4"
+        classpath group: 'de.dfki.mary', name: 'marytts-runtime', version: "5.2-SNAPSHOT"
+        ['de'].each { locale ->
+            classpath group: 'de.dfki.mary', name: "marytts-lang-$locale", version: "5.2-SNAPSHOT"
+        }
+    }
+
+}
+
+plugins {
+    id 'java'
+    id 'groovy'
+}
+
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+
+/* Marytts needed packages */
+import marytts.LocalMaryInterface;
+import marytts.MaryInterface;
+import marytts.datatypes.MaryData;
+import marytts.datatypes.MaryDataType;
+import marytts.modules.MaryModule;
+import marytts.util.MaryUtils;
+
+/* MaryData needed packages */
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+import org.xml.sax.InputSource ;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+
+import groovy.json.* // To load the JSON configuration file
+import java.util.*
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+import marytts.hts.labels.LevelsToLabels;
+
+
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+
+protected String convertLabel(String label)
+{
+
+    def alphabet_converter = LevelsToLabels.initPhConverter()
+    def modifier = LevelsToLabels.initModifier();
+    String final_label = label;
+
+    // Strip the modifier just to convert the label
+    String tmp_label = label;
+    for (String key: modifier.keySet())
+    {
+        tmp_label = tmp_label.replaceAll(key, "");
+    }
+
+    if (alphabet_converter.containsKey(tmp_label))
+        final_label = final_label.replaceAll(Pattern.quote(tmp_label), alphabet_converter.get(tmp_label));
+        else
+        logger.debug("<{}> is not in the map", tmp_label);
+
+        // Dealing with nasalisation
+        for (String key: modifier.keySet())
+        {
+            final_label = final_label.replaceAll(key, modifier.get(key));
+        }
+
+        logger.debug("converting <{}> to <{}>", label, final_label);
+        return final_label;
+}
+
+
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+
+
+// Load interface
+System.setProperty("modules.preferred.classes.list",
+                   "marytts.hts.labels.HTSLabelGenerator")
+def mary = new LocalMaryInterface();
+Locale loc = Locale.GERMAN;
+mary.setLocale(loc);
+mary.setInputType("ACOUSTPARAMS")
+mary.setOutputType("HTSLABEL");
+
+def corpus_name = System.getProperty("corpus_name")
+
+def list_file = "$projectDir/src/$corpus_name/list_basenames"
+def xml_dir = "$projectDir/src/$corpus_name/xml"
+def f0_dir = "$projectDir/src/$corpus_name/f0"
+def dur_dir = "$projectDir/src/$corpus_name/dur"
+def cmp_models = "$projectDir/../hts_training/build/raw/models/re_clustered_cmp.mmf"
+def dur_models = "$projectDir/../hts_training/build/raw/models/re_clustered_dur.mmf"
+def tree_dir = "$projectDir/../hts_training/build/raw/trees"
+def gv_dir = "$projectDir/../hts_training/build/raw/gv"
+def full_list_file = "$projectDir/../hts_training/build/raw/full.list"
+def configuration_file = "$projectDir/../configurations/${corpus_name}.json"
+
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+(new File(list_file)).eachLine{ basename ->
+    def f0_path = "$f0_dir/${basename}.f0"
+    def xml_path = "$xml_dir/${basename}.xml"
+    def dur_path = "$dur_dir/${basename}.dur"
+    def lf0_path = "$rootProject.projectDir/build/lf0/${basename}.lf0"
+    def lab_path = "$rootProject.projectDir/build/lab/${basename}.lab"
+    def seg_path = "$rootProject.projectDir/build/seg/${basename}.seg"
+    def desc_path = "$rootProject.projectDir/build/desc/${basename}.desc"
+    def wav_path = "$rootProject.projectDir/build/wav/${basename}.wav"
+
+    (new File("tmp/$basename")).mkdirs()
+    project(":tmp/$basename") {
+
+
+        task computeDescriptiveFeatures() {
+
+            inputs.files xml_path
+            outputs.files desc_path
+
+            doLast {
+                def text = (new File(xml_path)).text
+
+                DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+                InputSource is = new InputSource();
+                is.setCharacterStream(new StringReader(text));
+                Document doc = db.parse(is);
+                (new File(desc_path)).text = mary.generateText(doc);
+            }
+        }
+
+        task getSegmentBoundaries() {
+
+            inputs.files dur_path
+            outputs.files seg_path
+
+            doLast {
+                def previous = 0
+                def header_over = false
+
+                //
+                def lines = (new File(dur_path)).readLines()
+                def seg_file = new File(seg_path)
+                seg_file.text = ""
+
+                // TODO: be more general as only ehmm file are taken into account
+                for (def i=0; i<lines.size(); i++) {
+                    def cur_line = lines[i]
+                    cur_line = cur_line.trim()
+                    def list_item = cur_line.split()
+                    def final_label = list_item[0]
+                    if (final_label == "<p:>") {
+                        final_label = "_"
+                    }
+                    final_label = convertLabel(final_label)
+
+                    if (i < (lines.size() - 1)) {
+                        def list_item2 = lines[i+1].trim().split()
+                        // Shift if duplicate pause !
+                        if ((list_item2[0] == list_item[0]) &&
+                            (final_label == "pau")) {
+                            continue
+                        }
+
+                    }
+
+                    seg_file.append(previous + "\t" +
+                                    (previous + Math.round(list_item[1].toFloat()* 10000000)) + "\t" +
+                                    final_label + System.getProperty("line.separator"))
+                    previous += Math.round(list_item[1].toFloat()* 10000000)
+                }
+            }
+        }
+
+        task generateLabels(dependsOn:[computeDescriptiveFeatures, getSegmentBoundaries]) {
+            def lab_file = new File(lab_path)
+            inputs.files seg_path, desc_path
+            outputs.files lab_path
+
+            doLast {
+                def segments = new File(seg_path).readLines()
+                def desc = new File(desc_path).readLines()
+                def pattern_pause = ""
+                def ignore = false
+
+                // Need an alignment
+                def segs_bef_align = []
+                for (def i=0; i<segments.size; i++)
+                {
+                    def segment_infos = segments[i].split()
+                    def lab = segment_infos[2]
+                    if (lab != "pau") {
+                        // FIXME: by default sampa as an input alphabet
+                        segs_bef_align.add(lab)
+                    }
+                }
+
+
+                def desc_bef_align = []
+                for (def i=0; i<desc.size; i++)
+                {
+                    def m = desc[i] =~ /.*-(\w*)\+.*/
+                    m.matches()
+                    def lab = m.group(1)
+                    if (lab != "pau") {
+                        desc_bef_align.add(desc[i])
+                    } else {
+                        pattern_pause = desc[i]
+                    }
+
+                }
+
+                // FIXME: find a way to do exceptions
+                if (desc_bef_align.size != segs_bef_align.size) {
+                    ignore = true
+                    println("do not know how to deal with missing phones/phonemes (${desc_bef_align.size} != ${segs_bef_align.size})")
+                }
+
+                if (!ignore) {
+                    // Reinit in case of
+                    lab_file.text = ""
+
+                    // Merging (FIXME: hard coded format + empty symbols)
+                    def format = "%s^%s-%s+%s=%s"
+                    def infos = ["x", "x", "x", segments[0].split()[2], segments[1].split()[2]]
+                    pattern_pause = pattern_pause.replaceFirst(/[^@]*@/, "@")
+                    def offset = 0
+                    for (def i=0; i<segments.size; i++)
+                    {
+                        infos.remove(0)
+                        if (i+2 < segments.size)  {
+                            infos.add(segments[i+2].split()[2])
+                        } else {
+                            infos.add("x")
+                        }
+
+                        def segment_infos = segments[i].split()
+
+
+                        if (segment_infos[2] == "pau") {
+                            def val = String.format(format, infos as String[]) + pattern_pause
+                            lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
+                            offset += 1
+                        } else {
+                            def val = String.format(format, infos as String[]) + desc_bef_align[i-offset].replaceFirst(/[^@]*@/, "@")
+                            lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
+                        }
+                    }
+                }
+            }
+        }
+
+        task adaptF0() {
+            inputs.files f0_path
+            outputs.files lf0_path
+            doLast {
+                exec {
+                    workingDir rootProject.projectDir
+                    commandLine "python3", "utils/f02lf0.py", f0_path, lf0_path
+                }
+            }
+        }
+
+        task synthesize(dependsOn: [generateLabels, adaptF0]) {
+            inputs.files lab_path, lf0_path
+            outputs.files wav_path
+            doLast {
+                exec {
+                    workingDir rootProject.projectDir
+                    commandLine "python3", "utils/pyhts/synthesis/synth.py", "-D",
+                    "-c", configuration_file, // "-D",
+                    "-m", cmp_models, "-d", dur_models,
+                    "-t", tree_dir, "-u", tree_dir,
+                    "-g", gv_dir, "-p", 0, "-l", full_list_file,
+                    "-I", "$rootProject.projectDir/build/lf0/",
+                    "-i", lab_path, "-o", "$rootProject.projectDir/build/wav"
+
+                }
+            }
+        }
+    }
+}
+
+task run() {
+    (new File("$rootProject.projectDir/build/lf0")).mkdirs()
+    (new File("$rootProject.projectDir/build/seg")).mkdirs()
+    (new File("$rootProject.projectDir/build/desc")).mkdirs()
+    (new File("$rootProject.projectDir/build/lab")).mkdirs()
+    (new File("$rootProject.projectDir/build/wav")).mkdirs()
+    (new File(list_file)).eachLine { basename ->
+        dependsOn.add(":tmp/$basename:synthesize")
+    }
+}
+
+
+tasks.build.dependsOn "run"
