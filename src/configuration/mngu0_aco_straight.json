@@ -156,7 +156,7 @@
         "samplerate": 48000
     },
     "data": {
-        "project_dir": "../corpus/mngu0",
+        "project_dir": "../src/mngu0",
         "question_file_gv": "questions/questions_utt.hed",
         "question_file": "questions/questions.hed",
         "full_lab_dir": "labels/full",
