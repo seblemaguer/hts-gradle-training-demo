@@ -105,7 +105,7 @@ mary.setInputType("ACOUSTPARAMS")
 mary.setOutputType("HTSLABEL");
 
 def corpus_name = System.getProperty("corpus_name")
-
+def configuration_name = System.getProperty("configuration_name")
 def list_file = "$projectDir/src/$corpus_name/list_basenames"
 def xml_dir = "$projectDir/src/$corpus_name/xml"
 def f0_dir = "$projectDir/src/$corpus_name/f0"
@@ -115,7 +115,7 @@ def dur_models = "$projectDir/../hts_training/build/raw/models/re_clustered_dur.
 def tree_dir = "$projectDir/../hts_training/build/raw/trees"
 def gv_dir = "$projectDir/../hts_training/build/raw/gv"
 def full_list_file = "$projectDir/../hts_training/build/raw/full.list"
-def configuration_file = "$projectDir/../configurations/${corpus_name}.json"
+def configuration_file = "$projectDir/../configurations/${configuration_name}.json"
 
 /***************************************************************************************************
  ***

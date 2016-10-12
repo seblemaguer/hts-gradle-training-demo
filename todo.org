@@ -8,16 +8,22 @@
 SCHEDULED: <2016-09-06 Tue>
 ** DONE Train acoustic part
 CLOSED: [2016-09-20 Tue 13:06] SCHEDULED: <2016-09-06 Tue>
-** TODO Adapt gradle-extraction-plugin to integrate EMA
-DEADLINE: <2016-10-07 Fri>
-** DELEGATED See how to extract EMA
-DEADLINE: <2016-10-06 Thu>
+** DONE Adapt gradle-extraction-plugin to integrate EMA
+CLOSED: [2016-10-07 Fri 15:24] DEADLINE: <2016-10-07 Fri>
+** DONE See how to extract EMA
+CLOSED: [2016-10-07 Fri 15:24] DEADLINE: <2016-10-06 Thu>
+** DONE See which ema to use
+CLOSED: [2016-10-10 Mon 09:48] SCHEDULED: <2016-10-10 Mon>
+** CANCELLED Apply dimension reduction                           :CANCELLED:
+CLOSED: [2016-10-12 Wed 15:31]
+- State "CANCELLED"  from "TODO"       [2016-10-12 Wed 15:31] \\
+  Useless
 ** DONE Integrate the synthesis part
 CLOSED: [2016-09-20 Tue 13:06] SCHEDULED: <2016-09-07 Wed>
 ** DONE Check the acoustic modelling
 CLOSED: [2016-09-20 Tue 13:06] SCHEDULED: <2016-09-06 Tue>
-** TODO Apply evaluation methodology
-SCHEDULED: <2016-09-20 Tue>
+** DEFERRED Apply evaluation methodology
+CLOSED: [2016-10-12 Wed 15:31] SCHEDULED: <2016-10-10 Mon>
 * Paper
 :PROPERTIES:
 :CATEGORY: Paper
