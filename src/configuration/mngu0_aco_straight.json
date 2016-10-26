@@ -11,7 +11,7 @@
             "spause",
             "insp"
         ],
-        "use": true
+        "use": false
     },
     "models": {
         "dur": {
@@ -118,6 +118,7 @@
     },
     "settings": {
         "synthesis": {
+            "kind": "straight",
             "maxemiter": 20,
             "tree_ext": "inf",
             "gv" : {
