@@ -188,7 +188,7 @@
         "text_dir":"text",
         "alignment_dir":"lab",
         "wav_dir": "wav",
-        "list_files": "list_training_files",
+        "list_files": "list_training",
         "scp": "scp/train.scp"
     },
     "output": {
