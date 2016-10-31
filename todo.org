@@ -1,4 +1,4 @@
-* Experiments
+* ART./Speech synthesis [84%]
 :PROPERTIES:
 :CATEGORY: experiment
 :END:
@@ -14,19 +14,14 @@ CLOSED: [2016-10-07 Fri 15:24] DEADLINE: <2016-10-07 Fri>
 CLOSED: [2016-10-07 Fri 15:24] DEADLINE: <2016-10-06 Thu>
 ** DONE See which ema to use
 CLOSED: [2016-10-10 Mon 09:48] SCHEDULED: <2016-10-10 Mon>
-** CANCELLED Apply dimension reduction                           :CANCELLED:
+** DONE Apply dimension reduction
 CLOSED: [2016-10-12 Wed 15:31]
+- State "DONE"       from "CANCELLED"  [2016-10-31 Mon 08:34]
 - State "CANCELLED"  from "TODO"       [2016-10-12 Wed 15:31] \\
   Useless
 ** DONE Integrate the synthesis part
 CLOSED: [2016-09-20 Tue 13:06] SCHEDULED: <2016-09-07 Wed>
 ** DONE Check the acoustic modelling
 CLOSED: [2016-09-20 Tue 13:06] SCHEDULED: <2016-09-06 Tue>
-** DEFERRED Apply evaluation methodology
-CLOSED: [2016-10-12 Wed 15:31] SCHEDULED: <2016-10-10 Mon>
-* Paper
-:PROPERTIES:
-:CATEGORY: Paper
-:END:
-** Special Issue on Biosignal-based Spoken Communication
-DEADLINE: <2016-11-30 Wed>
+** TODO Generate files according to a test corpus
+** TODO Adding evaluation part
