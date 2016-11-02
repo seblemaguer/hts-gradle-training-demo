@@ -44,3 +44,31 @@ task prepareData() {
         stream.coeffDir = "$project.buildDir/${stream.coeffDir}"
     }
 }
+
+task finalize(dependsOn: run) {
+    doLast {
+        // Copy configuration file
+        copy {
+            from config_file.getParent()
+            to "$buildDir/raw"
+            include config_file.getName()
+        }
+
+        // Creating win directory
+        (new File("$buildDir/raw/win")).mkdirs()
+
+        //
+        project.user_configuration.models.cmp.streams.each { stream ->
+            stream.winfiles { winfilename ->
+                def winfile = new File(DataFileFinder.getFilePath(winfilename))
+                copy {
+                    from winfile.getParent()
+                    to "$buildDir/raw/win"
+                    include winfile.getName()
+                }
+            }
+        }
+    }
+}
+
+build.dependsOn finalize
