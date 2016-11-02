@@ -50,7 +50,7 @@ task finalize(dependsOn: run) {
         // Copy configuration file
         copy {
             from config_file.getParent()
-            to "$buildDir/raw"
+            into "$buildDir/raw"
             include config_file.getName()
         }
 
@@ -59,11 +59,11 @@ task finalize(dependsOn: run) {
 
         //
         project.user_configuration.models.cmp.streams.each { stream ->
-            stream.winfiles { winfilename ->
+            stream.winfiles.each { winfilename ->
                 def winfile = new File(DataFileFinder.getFilePath(winfilename))
                 copy {
                     from winfile.getParent()
-                    to "$buildDir/raw/win"
+                    into "$buildDir/raw/win"
                     include winfile.getName()
                 }
             }
