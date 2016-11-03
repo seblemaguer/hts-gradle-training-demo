@@ -106,15 +106,10 @@ mary.setOutputType("HTSLABEL");
 
 def corpus_name = System.getProperty("corpus_name")
 def configuration_name = System.getProperty("configuration_name")
-def list_file = "$projectDir/src/$corpus_name/list_basenames"
+def list_file = "$projectDir/src/$corpus_name/list_test"
 def xml_dir = "$projectDir/src/$corpus_name/xml"
 def f0_dir = "$projectDir/src/$corpus_name/f0"
 def dur_dir = "$projectDir/src/$corpus_name/dur"
-def cmp_models = "$projectDir/../hts_training/build/raw/models/re_clustered_cmp.mmf"
-def dur_models = "$projectDir/../hts_training/build/raw/models/re_clustered_dur.mmf"
-def tree_dir = "$projectDir/../hts_training/build/raw/trees"
-def gv_dir = "$projectDir/../hts_training/build/raw/gv"
-def full_list_file = "$projectDir/../hts_training/build/raw/full.list"
 def configuration_file = "$projectDir/../configurations/${configuration_name}.json"
 
 /***************************************************************************************************
@@ -128,7 +123,6 @@ def configuration_file = "$projectDir/../configurations/${configuration_name}.js
     def lab_path = "$rootProject.projectDir/build/lab/${basename}.lab"
     def seg_path = "$rootProject.projectDir/build/seg/${basename}.seg"
     def desc_path = "$rootProject.projectDir/build/desc/${basename}.desc"
-    def wav_path = "$rootProject.projectDir/build/wav/${basename}.wav"
 
     (new File("tmp/$basename")).mkdirs()
     project(":tmp/$basename") {
@@ -281,37 +275,73 @@ def configuration_file = "$projectDir/../configurations/${configuration_name}.js
                 }
             }
         }
+    }
+}
 
-        task synthesize(dependsOn: [generateLabels, adaptF0]) {
-            inputs.files lab_path, lf0_path
-            outputs.files wav_path
-            doLast {
-                exec {
-                    workingDir rootProject.projectDir
-                    commandLine "python3", "utils/pyhts/synthesis/synth.py", "-D",
-                    "-c", configuration_file, // "-D",
-                    "-m", cmp_models, "-d", dur_models,
-                    "-t", tree_dir, "-u", tree_dir,
-                    "-g", gv_dir, "-p", 0, "-l", full_list_file,
-                    "-I", "$rootProject.projectDir/build/lf0/",
-                    "-i", lab_path, "-o", "$rootProject.projectDir/build/wav"
 
-                }
-            }
+task prepareSynthesis() {
+
+    (new File("$rootProject.projectDir/build/lf0")).mkdirs()
+    (new File("$rootProject.projectDir/build/seg")).mkdirs()
+    (new File("$rootProject.projectDir/build/desc")).mkdirs()
+    (new File(list_file)).eachLine { basename ->
+        dependsOn.add(":tmp/$basename:generateLabels")
+        dependsOn.add(":tmp/$basename:adaptF0")
+    }
+
+
+    def lab_path = "$buildDir/lab"
+    inputs.files lab_path
+    (new File(lab_path)).mkdirs()
+
+    def scp =  new File("$buildDir/synth.scp")
+    outputs.files scp
+    doLast {
+        scp.text = ""
+        (new File(list_file)).eachLine { basename ->
+            scp << "$buildDir/lab/${basename}.lab" << "\n"
+        }
+    }
+
+
+}
+
+task synthesize(dependsOn:prepareSynthesis) {
+
+    def scp = new File("$buildDir/synth.scp")
+
+    def output_path = "$buildDir/output/normal"
+    outputs.files output_path
+    (new File(output_path)).mkdirs()
+
+
+    doLast {
+        exec {
+            workingDir rootProject.projectDir
+            commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", "-P",
+            "-c", configuration_file,
+            "-s", "-i", scp, "-o", output_path
         }
     }
 }
 
-task run() {
-    (new File("$rootProject.projectDir/build/lf0")).mkdirs()
-    (new File("$rootProject.projectDir/build/seg")).mkdirs()
-    (new File("$rootProject.projectDir/build/desc")).mkdirs()
-    (new File("$rootProject.projectDir/build/lab")).mkdirs()
-    (new File("$rootProject.projectDir/build/wav")).mkdirs()
-    (new File(list_file)).eachLine { basename ->
-        dependsOn.add(":tmp/$basename:synthesize")
+task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
+
+    def scp = new File("$buildDir/synth.scp")
+
+    def output_path = "$buildDir/output/imposed_dur"
+    outputs.files output_path
+    (new File(output_path)).mkdirs()
+
+
+    doLast {
+        exec {
+            workingDir rootProject.projectDir
+            commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", "-P", "-D",
+            "-c", configuration_file,
+            "-s", "-i", scp, "-o", output_path
+        }
     }
 }
 
-
-tasks.build.dependsOn "run"
+tasks.build.dependsOn "synthesize"
