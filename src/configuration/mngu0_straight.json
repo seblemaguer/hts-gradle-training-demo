@@ -11,7 +11,7 @@
             "spause",
             "insp"
         ],
-        "use": false
+        "use": true
     },
     "models": {
         "dur": {
