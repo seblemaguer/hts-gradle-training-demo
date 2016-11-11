@@ -21,16 +21,21 @@ import marytts.analysis.alignment.IDAlignment;
 import marytts.analysis.utils.LoadingHelpers;
 import groovy.json.*
 
-/*
-def list_file = new File(DataFileFinder.getFilePath("list_test"))
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+
 def slurper = new JsonSlurper()
 def config_file =  new File(System.getProperty("configuration"))
 def config = slurper.parseText( config_file.text )
-*/
 
-def synth_dir = "/home/slemaguer/Dropbox/shared/expes_splines/synthesis_results/ph_deco/normal"
-def nat_dir = "/home/slemaguer/Dropbox/shared/expes_splines/synthesis_results/ph_deco/imposed_dur"
-def list = "list"
+def list_file = new File(DataFileFinder.getFilePath("list_test"))
+
+def synth_dir = "../synthesis/build/output"
+def nat_dir = "../training/build"
+def nat_lab_dir = DataFileFinder.getFilePath(config.data.full_lab_dir)
+def list = "list_test"
+
 /*******************************************************************************************
  **
  *******************************************************************************************/
@@ -41,9 +46,9 @@ task computeRMSEF0() {
         def loading = new LoadingHelpers();
         output_f.text = "#id\trms(cent)\n"
 
-        (new File(list)).eachLine { line ->
+        list_file.eachLine { line ->
             //
-            double[][] src = loading.loadFloatBinary("${nat_dir}/${line}.lf0", 1);
+            double[][] src = loading.loadFloatBinary("${nat_dir}/lf0/${line}.lf0", 1);
             double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.lf0", 1);
 
             def nb_frames = Math.min(src.length, tgt.length)
@@ -84,9 +89,9 @@ task computeVUVRate() {
         def loading = new LoadingHelpers();
         output_f.text = "#id\tvoice_error\n"
 
-        (new File(list)).eachLine { line ->
+        list_file.eachLine { line ->
             //
-            double[][] src = loading.loadFloatBinary("${nat_dir}/${line}.lf0", 1);
+            double[][] src = loading.loadFloatBinary("${nat_dir}/lf0/${line}.lf0", 1);
             double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.lf0", 1);
 
             def nb_frames = Math.min(src.length, tgt.length)
@@ -121,62 +126,37 @@ task computeVUVRate() {
 }
 
 task computeRMSEEMA() {
-    /*
-    def output_f = new File("$buildDir/voice_error.csv")
+
+    def output_f = new File("$buildDir/rms_ema.csv")
     outputs.files output_f
     doLast {
         def loading = new LoadingHelpers();
-        output_f.text = "#id\tvoice_error\n"
+        output_f.text = "#id\trmse\n"
 
-        (new File(list)).eachLine { line ->
+        list_file.eachLine { line ->
             //
-            double[][] src = loading.loadFloatBinary("${nat_dir}/${line}.lf0", 1);
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.lf0", 1);
+            double[][] src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", 21); // FIXME: hardcoded frame size
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", 21); // FIXME: hardcoded frame size
 
             def nb_frames = Math.min(src.length, tgt.length)
-            for (int i=0; i<nb_frames; i++)
-            {
-                if (src[i][0] != -1.0e+10)
-                {
-                    src[i][0] = Math.exp(src[i][0])
-                }
-                else
-                {
-                    src[i][0] = 0;
-                }
-
-                if (tgt[i][0] != -1.0e+10)
-                {
-                    tgt[i][0] = Math.exp(tgt[i][0])
-                }
-                else
-                {
-                    tgt[i][0] = 0;
-                }
-            }
 
             // Generate path
             def alignment = new IDAlignment(nb_frames);
-            def v = new VoicingError(src, tgt, 0.0);
+            def v = new RMS(src, tgt, 21); // FIXME: hardcoded frame size
             Double d = v.distancePerUtterance(alignment);
             output_f << "$line\t$d\n";
         }
     }
-    */
+
 }
 
 task adaptDurToLab() {
     doLast {
         // FIXME: tmp for debug
-        (new File("$buildDir/lab1")).mkdirs()
         (new File("$buildDir/lab")).mkdirs()
-        (new File(list)).eachLine { line ->
-            // FIXME: tmp for debug
+        list_file.eachLine { line ->
             exec {
-                commandLine "perl", "utils/duration2htk.pl", "${nat_dir}/${line}.dur", "$buildDir/lab1/${line}.lab"
-            }
-            exec {
-                commandLine "perl", "utils/duration2htk.pl", "${synth_dir}/${line}.dur", "$buildDir/lab/${line}.lab"
+                commandLine "perl", "utils/duration2htk.pl", "${synth_dir}/normal/${line}.dur", "$buildDir/lab/${line}.lab"
             }
         }
     }
@@ -192,11 +172,11 @@ task computeRMSEDur() {
 
         output_f.text = "#id\trms (ms)\n"
 
-        (new File(list)).eachLine { line ->
+        list_file.eachLine { line ->
 
             // Loading first label
            def ref_dur_list = []
-           (new File("$buildDir/lab1/${line}.lab")).eachLine { label -> // FIXME: hardcoded reference name
+           (new File("$nat_lab_dir/${line}.lab")).eachLine { label -> // FIXME: hardcoded reference name
                def elts = label.split()
                ref_dur_list << (elts[1].toInteger() - elts[0].toInteger())/ 10000
            }
@@ -239,9 +219,9 @@ task computeMCDIST() {
         def loading = new LoadingHelpers();
         output_f.text = "#id\tmcdist\n"
 
-        (new File(list)).eachLine { line ->
+        list_file.eachLine { line ->
             //
-            double[][] src = loading.loadFloatBinary("${nat_dir}/${line}.mgc", 50); // FIXME: hardcoded frame size
+            double[][] src = loading.loadFloatBinary("${nat_dir}/mgc/${line}.mgc", 50); // FIXME: hardcoded frame size
             double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.mgc", 50); // FIXME: hardcoded frame size
 
             def nb_frames = Math.min(src.length, tgt.length)
@@ -256,50 +236,81 @@ task computeMCDIST() {
 }
 
 task generateReport() {
-    dependsOn computeRMSEF0, computeVUVRate, computeRMSEDur, computeRMSEEMA, computeMCDIST
+    // dependsOn computeRMSEF0, computeVUVRate, computeRMSEDur, computeRMSEEMA, computeMCDIST
+    dependsOn computeRMSEEMA, computeRMSEDur
 
     def input_rms_f0 = new File("$buildDir/rms_f0.csv")
     def input_vuvrate = new File("$buildDir/voice_error.csv")
     def input_mcdist = new File("$buildDir/mcdist.csv")
     def input_rms_dur = new File("$buildDir/rms_dur.csv")
+    def input_rms_ema = new File("$buildDir/rms_ema.csv")
     def output_f = new File("$buildDir/report.csv")
     outputs.files output_f
 
     doLast {
-    output_f.text = "#id\tmean\tstd\tconfint\n"
+        output_f.text = "#id\tmean\tstd\tconfint\n"
 
-        // RMS F0 part
-        def values = []
-        input_rms_f0.eachLine { line ->
-            if (line.startsWith("#"))
-                return; // Continue...
+        // // RMS F0 part
+        // def values = []
+        // input_rms_f0.eachLine { line ->
+        //     if (line.startsWith("#"))
+        //         return; // Continue...
 
-            def elts = line.split()
-            values << Double.parseDouble(elts[1])
-        }
-        Double[] rms = new Double[values.size()];
-        values.toArray(rms);
-        Statistics s = new Statistics(rms);
-        output_f << "rms f0\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+        //     def elts = line.split()
+        //     values << Double.parseDouble(elts[1])
+        // }
+        // Double[] rms = new Double[values.size()];
+        // values.toArray(rms);
+        // Statistics s = new Statistics(rms);
+        // output_f << "rms f0\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
 
 
-        // Voice/Unvoice error rate part
-        values = []
-        input_vuvrate.eachLine { line ->
-            if (line.startsWith("#"))
-                return; // Continue...
+        // // Voice/Unvoice error rate part
+        // values = []
+        // input_vuvrate.eachLine { line ->
+        //     if (line.startsWith("#"))
+        //         return; // Continue...
 
-            def elts = line.split()
-            values << Double.parseDouble(elts[1])
-        }
-        Double[] vuvrate = new Double[values.size()];
-        values.toArray(vuvrate);
-        s = new Statistics(vuvrate);
-        output_f << "vuvrate\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+        //     def elts = line.split()
+        //     values << Double.parseDouble(elts[1])
+        // }
+        // Double[] vuvrate = new Double[values.size()];
+        // values.toArray(vuvrate);
+        // s = new Statistics(vuvrate);
+        // output_f << "vuvrate\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
 
         // RMS DUR part
-        values = []
+        def values = []
         input_rms_dur.eachLine { line ->
+            if (line.startsWith("#"))
+                return; // Continue...
+
+            def elts = line.split()
+            values << Double.parseDouble(elts[1])
+        }
+        def rms = new Double[values.size()];
+        values.toArray(rms);
+        def s = new Statistics(rms);
+        output_f << "rms dur\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+
+
+        // // Mel CepstralDistorsion part
+        // values = []
+        // input_mcdist.eachLine { line ->
+        //     if (line.startsWith("#"))
+        //         return; // Continue...
+
+        //     def elts = line.split()
+        //     values << Double.parseDouble(elts[1])
+        // }
+        // Double[] mcdist = new Double[values.size()];
+        // values.toArray(mcdist);
+        // s = new Statistics(mcdist);
+        // output_f << "mcdist\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+
+        // RMS EMA part
+        values = []
+        input_rms_ema.eachLine { line ->
             if (line.startsWith("#"))
                 return; // Continue...
 
@@ -309,22 +320,8 @@ task generateReport() {
         rms = new Double[values.size()];
         values.toArray(rms);
         s = new Statistics(rms);
-        output_f << "rms dur\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+        output_f << "rms ema\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
 
-
-        // Mel CepstralDistorsion part
-        values = []
-        input_mcdist.eachLine { line ->
-            if (line.startsWith("#"))
-                return; // Continue...
-
-            def elts = line.split()
-            values << Double.parseDouble(elts[1])
-        }
-        Double[] mcdist = new Double[values.size()];
-        values.toArray(mcdist);
-        s = new Statistics(mcdist);
-        output_f << "mcdist\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
     }
 }
 

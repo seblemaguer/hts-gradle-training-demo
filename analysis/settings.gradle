@@ -1,7 +1,7 @@
 import groovy.json.* // To load the JSON configuration file
 import java.util.*
 
-/*
+
 def slurper = new JsonSlurper()
 def config_file =  new File(System.getProperty("configuration"))
 def config = slurper.parseText( config_file.text )
@@ -11,4 +11,3 @@ DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.lo
 if (config.data.project_dir) {
     DataFileFinder.project_path = config.data.project_dir
 }
-*/
