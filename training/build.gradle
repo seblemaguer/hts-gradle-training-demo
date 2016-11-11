@@ -34,8 +34,20 @@ apply plugin: "de.dfki.mary.htsvoicebuilding"
     }
 }
 
+
+(new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
+    project(":$basename") {
+        buildDir = project.parent.buildDir
+        apply plugin: "de.dfki.mary.coefficientextraction"
+    }
+}
+
 task prepareData() {
     (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
+        dependsOn ":${basename}:generateCMP"
+    }
+
+    (new File(DataFileFinder.getFilePath("list_test"))).eachLine { basename ->
         dependsOn ":${basename}:generateCMP"
     }
 
@@ -45,6 +57,7 @@ task prepareData() {
     }
 }
 
+/*
 task finalize(dependsOn: run) {
     doLast {
         // Copy configuration file
@@ -72,3 +85,4 @@ task finalize(dependsOn: run) {
 }
 
 build.dependsOn finalize
+*/
