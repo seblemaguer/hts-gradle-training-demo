@@ -1,0 +1,111 @@
+apply plugin: 'groovy'
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath group:"de.dfki.mary", name:"marytts-analysis", version: "0.1"
+    }
+}
+
+
+
+import marytts.analysis.distances.acoustic.*;
+import marytts.analysis.distances.string.*;
+import marytts.analysis.Statistics;
+import marytts.analysis.alignment.IDAlignment;
+import marytts.analysis.utils.LoadingHelpers;
+import groovy.json.*
+
+/*
+def list_file = new File(DataFileFinder.getFilePath("list_test"))
+def slurper = new JsonSlurper()
+def config_file =  new File(System.getProperty("configuration"))
+def config = slurper.parseText( config_file.text )
+*/
+
+def synth_dir = "/home/slemaguer/Dropbox/shared/expes_splines/synthesis_results/ph_deco/imposed_dur"
+def nat_dir = "/home/slemaguer/Dropbox/shared/expes_splines/synthesis_results/hts_base/imposed_dur"
+def list = "list"
+/*******************************************************************************************
+ **
+ *******************************************************************************************/
+task computeRMSEF0() {
+
+    def output_f = new File("$buildDir/rms_f0.csv")
+    outputs.files output_f
+    doLast {
+        def loading = new LoadingHelpers();
+        output_f.text = "#id\trms\n"
+
+        (new File(list)).eachLine { line ->
+            //
+            double[][] src = loading.loadFloatBinary("${nat_dir}/${line}.lf0", 1);
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.lf0", 1);
+
+            def nb_frames = Math.min(src.length, tgt.length)
+            for (int i=0; i<nb_frames; i++)
+            {
+                if (src[i][0] != -1.0e+10)
+                {
+                    src[i][0] = Math.exp(src[i][0])
+                }
+                else
+                {
+                    src[i][0] = 0;
+                }
+
+                if (tgt[i][0] != -1.0e+10)
+                {
+                    tgt[i][0] = Math.exp(tgt[i][0])
+                }
+                else
+                {
+                    tgt[i][0] = 0;
+                }
+            }
+
+            // Generate path
+            def alignment = new IDAlignment(nb_frames);
+            def v = new CentRMS(src, tgt, 0.0);
+            Double d = v.distancePerUtterance(alignment);
+            output_f << "$line\t$d\n";
+        }
+    }
+}
+
+task computeRMSEEMA() {
+}
+
+task computeRMSEDUR() {
+}
+
+task computeMCDIST() {
+}
+
+task generateReport() {
+    dependsOn computeRMSEF0, computeRMSEEMA, computeMCDIST
+    def input_rms_f0 = new File("$buildDir/rms_f0.csv")
+    def output_f = new File("$buildDir/report.csv")
+    doLast {
+
+        def values = []
+        input_rms_f0.eachLine { line ->
+            if (line.startsWith("#"))
+                return; // Continue...
+
+            def elts = line.split()
+            values << Double.parseDouble(elts[1])
+        }
+        Double[] rms = new Double[values.size()];
+        values.toArray(rms);
+        Statistics s = new Statistics(rms);
+        println(s.mean())
+    }
+}
+
+build.dependsOn generateReport
