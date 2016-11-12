@@ -49,7 +49,7 @@ task computeRMSEF0() {
         list_file.eachLine { line ->
             //
             double[][] src = loading.loadFloatBinary("${nat_dir}/lf0/${line}.lf0", 1);
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.lf0", 1);
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.lf0", 1);
 
             def nb_frames = Math.min(src.length, tgt.length)
             for (int i=0; i<nb_frames; i++)
@@ -92,7 +92,7 @@ task computeVUVRate() {
         list_file.eachLine { line ->
             //
             double[][] src = loading.loadFloatBinary("${nat_dir}/lf0/${line}.lf0", 1);
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.lf0", 1);
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.lf0", 1);
 
             def nb_frames = Math.min(src.length, tgt.length)
             for (int i=0; i<nb_frames; i++)
@@ -222,7 +222,7 @@ task computeMCDIST() {
         list_file.eachLine { line ->
             //
             double[][] src = loading.loadFloatBinary("${nat_dir}/mgc/${line}.mgc", 50); // FIXME: hardcoded frame size
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.mgc", 50); // FIXME: hardcoded frame size
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.mgc", 50); // FIXME: hardcoded frame size
 
             def nb_frames = Math.min(src.length, tgt.length)
 
