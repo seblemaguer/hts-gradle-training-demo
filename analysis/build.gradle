@@ -236,48 +236,49 @@ task computeMCDIST() {
 }
 
 task generateReport() {
-    // dependsOn computeRMSEF0, computeVUVRate, computeRMSEDur, computeRMSEEMA, computeMCDIST
-    dependsOn computeRMSEEMA, computeRMSEDur
+
+    def ema_activated = false
+    def lf0_activated = false
+    def mgc_activated = false
+    def bap_activated = false
+
+    config.models.cmp.streams.each { stream ->
+        if (stream.kind == "lf0") {
+            lf0_activated = true
+            dependsOn computeRMSEF0, computeVUVRate
+        }
+
+        if (stream.kind == "mgc") {
+            mgc_activated = true
+            dependsOn computeMCDIST
+        }
+
+        /*
+        if (stream.kind == "bap") {
+            bap_activated = true
+            dependsOn computeRMSEBAP
+        }
+        */
+
+        if (stream.kind == "ema") {
+            ema_activated = true
+            dependsOn computeRMSEEMA
+        }
+    }
+
+    dependsOn computeRMSEDur
 
     def input_rms_f0 = new File("$buildDir/rms_f0.csv")
     def input_vuvrate = new File("$buildDir/voice_error.csv")
     def input_mcdist = new File("$buildDir/mcdist.csv")
     def input_rms_dur = new File("$buildDir/rms_dur.csv")
+    def input_rms_bap = new File("$buildDir/rms_bap.csv")
     def input_rms_ema = new File("$buildDir/rms_ema.csv")
     def output_f = new File("$buildDir/report.csv")
     outputs.files output_f
 
     doLast {
         output_f.text = "#id\tmean\tstd\tconfint\n"
-
-        // // RMS F0 part
-        // def values = []
-        // input_rms_f0.eachLine { line ->
-        //     if (line.startsWith("#"))
-        //         return; // Continue...
-
-        //     def elts = line.split()
-        //     values << Double.parseDouble(elts[1])
-        // }
-        // Double[] rms = new Double[values.size()];
-        // values.toArray(rms);
-        // Statistics s = new Statistics(rms);
-        // output_f << "rms f0\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
-
-
-        // // Voice/Unvoice error rate part
-        // values = []
-        // input_vuvrate.eachLine { line ->
-        //     if (line.startsWith("#"))
-        //         return; // Continue...
-
-        //     def elts = line.split()
-        //     values << Double.parseDouble(elts[1])
-        // }
-        // Double[] vuvrate = new Double[values.size()];
-        // values.toArray(vuvrate);
-        // s = new Statistics(vuvrate);
-        // output_f << "vuvrate\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
 
         // RMS DUR part
         def values = []
@@ -288,40 +289,74 @@ task generateReport() {
             def elts = line.split()
             values << Double.parseDouble(elts[1])
         }
-        def rms = new Double[values.size()];
-        values.toArray(rms);
-        def s = new Statistics(rms);
+        def dist = new Double[values.size()];
+        values.toArray(dist);
+        def s = new Statistics(dist);
         output_f << "rms dur\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
 
 
-        // // Mel CepstralDistorsion part
-        // values = []
-        // input_mcdist.eachLine { line ->
-        //     if (line.startsWith("#"))
-        //         return; // Continue...
+        // RMS F0 part
+        if (lf0_activated) {
+            values = []
+            input_rms_f0.eachLine { line ->
+                if (line.startsWith("#"))
+                    return; // Continue...
 
-        //     def elts = line.split()
-        //     values << Double.parseDouble(elts[1])
-        // }
-        // Double[] mcdist = new Double[values.size()];
-        // values.toArray(mcdist);
-        // s = new Statistics(mcdist);
-        // output_f << "mcdist\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+                    def elts = line.split()
+                    values << Double.parseDouble(elts[1])
+            }
+            dist = new Double[values.size()];
+            values.toArray(dist);
+            s = new Statistics(dist);
+            output_f << "rms f0\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+
+
+            // Voice/Unvoice error rate part
+            values = []
+            input_vuvrate.eachLine { line ->
+                if (line.startsWith("#"))
+                    return; // Continue...
+
+                    def elts = line.split()
+                    values << Double.parseDouble(elts[1])
+            }
+            dist = new Double[values.size()];
+            values.toArray(dist);
+            s = new Statistics(dist);
+            output_f << "vuvrate\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+        }
+
+        // Mel CepstralDistorsion part
+        if (mgc_activated) {
+            values = []
+            input_mcdist.eachLine { line ->
+                if (line.startsWith("#"))
+                    return; // Continue...
+
+                    def elts = line.split()
+                    values << Double.parseDouble(elts[1])
+            }
+            dist = new Double[values.size()];
+            values.toArray(dist);
+            s = new Statistics(dist);
+            output_f << "mcdist\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+        }
 
         // RMS EMA part
-        values = []
-        input_rms_ema.eachLine { line ->
-            if (line.startsWith("#"))
-                return; // Continue...
+        if (ema_activated) {
+            values = []
+            input_rms_ema.eachLine { line ->
+                if (line.startsWith("#"))
+                    return; // Continue...
 
-            def elts = line.split()
-            values << Double.parseDouble(elts[1])
+                    def elts = line.split()
+                    values << Double.parseDouble(elts[1])
+            }
+            dist = new Double[values.size()];
+            values.toArray(dist);
+            s = new Statistics(dist);
+            output_f << "rms ema\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
         }
-        rms = new Double[values.size()];
-        values.toArray(rms);
-        s = new Statistics(rms);
-        output_f << "rms ema\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
-
     }
 }
 
