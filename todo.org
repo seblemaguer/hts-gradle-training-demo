@@ -1,4 +1,4 @@
-* ART./Speech synthesis [84%]
+* ART./Speech synthesis [85%]
 :PROPERTIES:
 :CATEGORY: experiment
 :END:
@@ -23,5 +23,9 @@ CLOSED: [2016-10-12 Wed 15:31]
 CLOSED: [2016-09-20 Tue 13:06] SCHEDULED: <2016-09-07 Wed>
 ** DONE Check the acoustic modelling
 CLOSED: [2016-09-20 Tue 13:06] SCHEDULED: <2016-09-06 Tue>
-** TODO Generate files according to a test corpus
-** TODO Adding evaluation part
+** DONE Generate files according to a test corpus
+CLOSED: [2016-11-13 Sun 09:00]
+** DONE Adding evaluation part
+CLOSED: [2016-11-13 Sun 09:00]
+** TODO Support weight training
+** TODO Add weight evaluation
