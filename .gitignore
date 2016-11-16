@@ -18,7 +18,7 @@ gradle-app.setting
 
 ### Corpus ###
 src/mngu0
-
+tmp/
 ### Utils ###
 utils
 
