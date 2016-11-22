@@ -147,7 +147,30 @@ task computeRMSEEMA() {
             output_f << "$line\t$d\n";
         }
     }
+}
 
+task computeRMSEWeight() {
+
+    def output_f = new File("$buildDir/rms_weight.csv")
+    outputs.files output_f
+    doLast {
+        def loading = new LoadingHelpers();
+        output_f.text = "#id\trmse\n"
+
+        list_file.eachLine { line ->
+            //
+            double[][] src = loading.loadFloatBinary("${nat_dir}/weight/${line}.weight", 21); // FIXME: hardcoded frame size
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.weight", 21); // FIXME: hardcoded frame size
+
+            def nb_frames = Math.min(src.length, tgt.length)
+
+            // Generate path
+            def alignment = new IDAlignment(nb_frames);
+            def v = new RMS(src, tgt, 21); // FIXME: hardcoded frame size
+            Double d = v.distancePerUtterance(alignment);
+            output_f << "$line\t$d\n";
+        }
+    }
 }
 
 task adaptDurToLab() {
@@ -238,6 +261,7 @@ task computeMCDIST() {
 task generateReport() {
 
     def ema_activated = false
+    def weight_activated = false
     def lf0_activated = false
     def mgc_activated = false
     def bap_activated = false
@@ -264,6 +288,11 @@ task generateReport() {
             ema_activated = true
             dependsOn computeRMSEEMA
         }
+
+        if (stream.kind == "weight") {
+            weight_activated = true
+            dependsOn computeRMSEWeight
+        }
     }
 
     dependsOn computeRMSEDur
@@ -274,6 +303,7 @@ task generateReport() {
     def input_rms_dur = new File("$buildDir/rms_dur.csv")
     def input_rms_bap = new File("$buildDir/rms_bap.csv")
     def input_rms_ema = new File("$buildDir/rms_ema.csv")
+    def input_rms_weight = new File("$buildDir/rms_weight.csv")
     def output_f = new File("$buildDir/report.csv")
     outputs.files output_f
 
@@ -356,6 +386,22 @@ task generateReport() {
             values.toArray(dist);
             s = new Statistics(dist);
             output_f << "rms ema\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+        }
+
+        // RMS WEIGHT part
+        if (weight_activated) {
+            values = []
+            input_rms_weight.eachLine { line ->
+                if (line.startsWith("#"))
+                    return; // Continue...
+
+                    def elts = line.split()
+                    values << Double.parseDouble(elts[1])
+            }
+            dist = new Double[values.size()];
+            values.toArray(dist);
+            s = new Statistics(dist);
+            output_f << "rms weight\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
         }
     }
 }
