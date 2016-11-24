@@ -15,6 +15,7 @@ buildscript {
 
 
 import marytts.analysis.distances.acoustic.*;
+import marytts.analysis.distances.graphic.*;
 import marytts.analysis.distances.string.*;
 import marytts.analysis.Statistics;
 import marytts.analysis.alignment.IDAlignment;
@@ -33,9 +34,9 @@ def list_file = new File(DataFileFinder.getFilePath("list_test"))
 
 def synth_dir = "../synthesis/build/output"
 def nat_dir = "../training/build"
-def nat_lab_dir = DataFileFinder.getFilePath(config.data.full_lab_dir)
+def nat_lab_dir = DataFileFinder.getFilePath(config.data.mono_lab_dir)
 def list = "list_test"
-
+def channels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
 /*******************************************************************************************
  **
  *******************************************************************************************/
@@ -49,7 +50,7 @@ task computeRMSEF0() {
         list_file.eachLine { line ->
             //
             double[][] src = loading.loadFloatBinary("${nat_dir}/lf0/${line}.lf0", 1);
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.lf0", 1);
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.lf0", 1);
 
             def nb_frames = Math.min(src.length, tgt.length)
             for (int i=0; i<nb_frames; i++)
@@ -92,7 +93,7 @@ task computeVUVRate() {
         list_file.eachLine { line ->
             //
             double[][] src = loading.loadFloatBinary("${nat_dir}/lf0/${line}.lf0", 1);
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.lf0", 1);
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.lf0", 1);
 
             def nb_frames = Math.min(src.length, tgt.length)
             for (int i=0; i<nb_frames; i++)
@@ -149,30 +150,6 @@ task computeRMSEEMA() {
     }
 }
 
-task computeRMSEWeight() {
-
-    def output_f = new File("$buildDir/rms_weight.csv")
-    outputs.files output_f
-    doLast {
-        def loading = new LoadingHelpers();
-        output_f.text = "#id\trmse\n"
-
-        list_file.eachLine { line ->
-            //
-            double[][] src = loading.loadFloatBinary("${nat_dir}/weight/${line}.weight", 21); // FIXME: hardcoded frame size
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.weight", 21); // FIXME: hardcoded frame size
-
-            def nb_frames = Math.min(src.length, tgt.length)
-
-            // Generate path
-            def alignment = new IDAlignment(nb_frames);
-            def v = new RMS(src, tgt, 21); // FIXME: hardcoded frame size
-            Double d = v.distancePerUtterance(alignment);
-            output_f << "$line\t$d\n";
-        }
-    }
-}
-
 task adaptDurToLab() {
     doLast {
         // FIXME: tmp for debug
@@ -184,6 +161,74 @@ task adaptDurToLab() {
         }
     }
 }
+
+
+task computeDistEMAPerPhoneme() {
+    dependsOn adaptDurToLab
+    def output_f = new File("$buildDir/dist_euc_ema_per_phoneme.csv")
+    outputs.files output_f
+    doLast {
+        def loading = new LoadingHelpers();
+        def val = [:]
+        list_file.eachLine { line ->
+
+            //
+            double[][] src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", 21); // FIXME: hardcoded frame size
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", 21); // FIXME: hardcoded frame size
+
+            // Loading first label
+            def ref_dur_list = []
+            (new File("$nat_lab_dir/${line}.lab")).eachLine { label -> // FIXME: hardcoded reference name
+                def elts = label.split()
+
+                if (!(elts[2] in val)) {
+                    val[elts[2]] = []
+                    for (int i=0;i<7;i++) {
+                        val[elts[2]][i] = []
+                    }
+                }
+
+                def start = elts[0].toInteger() / (10000 * 5)
+                def end = elts[1].toInteger() / (10000 * 5)
+
+                // FIXME: hardcoded frame size
+                int nb_frames = (end - start).intValue()
+                for (int j=0; j<21; j+=3)
+                {
+                    double[][] real_src = new double[nb_frames][3];
+                    double[][] real_tgt = new double[nb_frames][3];
+                    for (int i=0; i<nb_frames; i++)
+                    {
+                        for (int k=0; k<3; k++)
+                        {
+                            real_src[i][k] = src[i][j+k]
+                            real_tgt[i][k] = tgt[i][j+k]
+                        }
+                    }
+
+
+                    def v = new EuclidianDistance(real_src, real_tgt, 3);
+                    for (int i=0; i<nb_frames; i++)
+                    {
+                        val[elts[2]][(j/3).intValue()] << v.distancePerFrame(i, i)
+                    }
+                }
+            }
+        }
+
+
+        output_f.text = "#label\tcoil\tnb_val\t\teuc_dist(mm)\tstdev\tconfint\n"
+        val.each { k,v ->
+            v.eachWithIndex {c,i ->
+                def dist = new Double[c.size()];
+                c.toArray(dist);
+                def s = new Statistics(dist);
+                output_f << "$k\t" << channels[i] <<"\t" << c.size() << "\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+            }
+        }
+    }
+}
+
 
 task computeRMSEDur() {
     dependsOn adaptDurToLab
@@ -245,7 +290,7 @@ task computeMCDIST() {
         list_file.eachLine { line ->
             //
             double[][] src = loading.loadFloatBinary("${nat_dir}/mgc/${line}.mgc", 50); // FIXME: hardcoded frame size
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.mgc", 50); // FIXME: hardcoded frame size
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/${line}.mgc", 50); // FIXME: hardcoded frame size
 
             def nb_frames = Math.min(src.length, tgt.length)
 
@@ -261,7 +306,6 @@ task computeMCDIST() {
 task generateReport() {
 
     def ema_activated = false
-    def weight_activated = false
     def lf0_activated = false
     def mgc_activated = false
     def bap_activated = false
@@ -286,12 +330,7 @@ task generateReport() {
 
         if (stream.kind == "ema") {
             ema_activated = true
-            dependsOn computeRMSEEMA
-        }
-
-        if (stream.kind == "weight") {
-            weight_activated = true
-            dependsOn computeRMSEWeight
+            dependsOn computeRMSEEMA, computeDistEMAPerPhoneme
         }
     }
 
@@ -303,7 +342,6 @@ task generateReport() {
     def input_rms_dur = new File("$buildDir/rms_dur.csv")
     def input_rms_bap = new File("$buildDir/rms_bap.csv")
     def input_rms_ema = new File("$buildDir/rms_ema.csv")
-    def input_rms_weight = new File("$buildDir/rms_weight.csv")
     def output_f = new File("$buildDir/report.csv")
     outputs.files output_f
 
@@ -386,22 +424,6 @@ task generateReport() {
             values.toArray(dist);
             s = new Statistics(dist);
             output_f << "rms ema\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
-        }
-
-        // RMS WEIGHT part
-        if (weight_activated) {
-            values = []
-            input_rms_weight.eachLine { line ->
-                if (line.startsWith("#"))
-                    return; // Continue...
-
-                    def elts = line.split()
-                    values << Double.parseDouble(elts[1])
-            }
-            dist = new Double[values.size()];
-            values.toArray(dist);
-            s = new Statistics(dist);
-            output_f << "rms weight\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
         }
     }
 }
