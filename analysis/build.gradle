@@ -13,6 +13,10 @@ buildscript {
 }
 
 
+ext {
+    utilsDir = file("$rootDir/utils")
+}
+
 
 import marytts.analysis.distances.acoustic.*;
 import marytts.analysis.distances.graphic.*;
@@ -32,13 +36,14 @@ def config = slurper.parseText( config_file.text )
 
 def list_file = new File(DataFileFinder.getFilePath("list_test"))
 
-def synth_dir = "../synthesis/build/output"
-def nat_dir = "../training/build"
+def synth_dir = "$buildDir/../../synthesis/build/output"
+def nat_dir = "$buildDir/../../training/build"
 def nat_lab_dir = DataFileFinder.getFilePath(config.data.mono_lab_dir)
 def list = "list_test"
 def channels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
+
 /*******************************************************************************************
- **
+ ** Global tasks
  *******************************************************************************************/
 task computeRMSEF0() {
     def output_f = new File("$buildDir/rms_f0.csv")
@@ -207,7 +212,6 @@ task adaptDurToLab() {
     }
 }
 
-
 task computeDistEMAPerPhoneme() {
     dependsOn adaptDurToLab
     def output_f = new File("$buildDir/dist_euc_ema_per_phoneme.csv")
@@ -273,7 +277,6 @@ task computeDistEMAPerPhoneme() {
         }
     }
 }
-
 
 task computeRMSEDur() {
     dependsOn adaptDurToLab
@@ -491,4 +494,125 @@ task generateReport() {
     }
 }
 
-build.dependsOn generateReport
+
+/***************************************************************************************************
+ *** Plotting
+ ***************************************************************************************************/
+
+task convertNaturalEMAToJson() {
+
+    outputs.files "$buildDir/ema_analysis/json"
+
+    doLast {
+        (new File("$buildDir/ema_analysis/json")).mkdirs()
+
+        list_file.eachLine { line ->
+
+            exec{
+                commandLine "python3 ema2json.py ${nat_dir}/ema/${line}.ema $buildDir/ema_analysis/json/${line}.json".tokenize()
+                workingDir rootProject.ext.utilsDir
+            }
+
+        }
+    }
+}
+
+task gatherGenNatEMAInformations() {
+    dependsOn convertNaturalEMAToJson
+
+    def output_dir = "$buildDir/ema_analysis/csv"
+
+    outputs.files output_dir
+
+    doLast {
+
+        (new File(output_dir)).mkdirs()
+        list_file.eachLine { line ->
+            def output_file = new File("$output_dir/${line}.csv")
+            output_file.text = "id_frame\tcoil\ttype\taxis\tvalue\n"
+
+            def orig_info = slurper.parseText( (new File("$buildDir/ema_analysis/json/${line}.json")).text )
+            def synth_info = slurper.parseText( (new File("${synth_dir}/imposed_dur/${line}.json")).text )
+
+            channels.each { c ->
+
+                orig_info.channels[c].position.eachWithIndex { pos, id ->
+
+                    // Dump info + x
+                    if ((id%3) == 0) {
+                        def id_frame = (id / 3).intValue()
+                        output_file << "$id_frame\t$c\toriginal\tx\t$pos\n"
+                    }
+
+                    // Dump y
+                    if ((id%3) == 1) {
+                        def id_frame = (id / 3).intValue()
+                        output_file << "$id_frame\t$c\toriginal\ty\t$pos\n"
+                    }
+
+                    // Dump z + new line
+                    if ((id%3) == 2) {
+                        def id_frame = (id / 3).intValue()
+                        output_file << "$id_frame\t$c\toriginal\tz\t$pos\n"
+                    }
+                }
+
+                synth_info.channels[c].position.eachWithIndex { pos, id ->
+
+                    // Dump info + x
+                    if ((id%3) == 0) {
+                        def id_frame = (id / 3).intValue()
+                        output_file << "$id_frame\t$c\tsynthesized\tx\t$pos\n"
+                    }
+
+                    // Dump y
+                    if ((id%3) == 1) {
+                        def id_frame = (id / 3).intValue()
+                        output_file << "$id_frame\t$c\tsynthesized\ty\t$pos\n"
+                    }
+
+                    // Dump z + new line
+                    if ((id%3) == 2) {
+                        def id_frame = (id / 3).intValue()
+                        output_file << "$id_frame\t$c\tsynthesized\tz\t$pos\n"
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
+task generateEMATrajectories() {
+    dependsOn gatherGenNatEMAInformations
+
+    def output_dirs = "$buildDir/ema_analysis/plots"
+    channels.each { c ->
+        (new File("$buildDir/ema_analysis/plots/$c")).mkdirs()
+    }
+    outputs.files "$buildDir/ema_analysis/plots"
+
+    doLast {
+        channels.each { c ->
+            list_file.eachLine { line ->
+                exec{
+                    commandLine "Rscript jsonPlotter.R $buildDir/ema_analysis/csv/${line}.csv $c $buildDir/ema_analysis/plots/$c/${line}.pdf".tokenize()
+                    workingDir rootProject.ext.utilsDir
+                }
+            }
+        }
+    }
+}
+
+task generatePlots() {
+
+
+    config.models.cmp.streams.each { stream ->
+        if (stream.kind == "ema") {
+            dependsOn generateEMATrajectories
+        }
+    }
+}
+
+build.dependsOn generateReport, generatePlots
