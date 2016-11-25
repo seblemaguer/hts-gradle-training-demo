@@ -150,6 +150,51 @@ task computeRMSEEMA() {
     }
 }
 
+task computeEucDistEMA() {
+    def output_handles = []
+    channels.each { c ->
+        output_handles << new File("$buildDir/euc_dist_${c}.csv")
+    }
+
+    doLast {
+        output_handles.each {f ->
+            f.text = "# euc. dist. (cm)\n"
+        }
+        def loading = new LoadingHelpers();
+        list_file.eachLine { line ->
+
+            //
+            double[][] src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", 21); // FIXME: hardcoded frame size
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", 21); // FIXME: hardcoded frame size
+
+
+            // FIXME: hardcoded frame size
+            int nb_frames = Math.min(src.length, tgt.length)
+            for (int j=0; j<21; j+=3)
+            {
+                double[][] real_src = new double[nb_frames][3];
+                double[][] real_tgt = new double[nb_frames][3];
+
+                for (int i=0; i<nb_frames; i++)
+                {
+                    for (int k=0; k<3; k++)
+                    {
+                        real_src[i][k] = src[i][j+k]
+                        real_tgt[i][k] = tgt[i][j+k]
+                    }
+                }
+
+
+                def v = new EuclidianDistance(real_src, real_tgt, 3);
+                for (int i=0; i<nb_frames; i++)
+                {
+                    output_handles[(j/3).intValue()] << v.distancePerFrame(i, i) << "\n"
+                }
+            }
+        }
+    }
+}
+
 task adaptDurToLab() {
     doLast {
         // FIXME: tmp for debug
@@ -330,7 +375,7 @@ task generateReport() {
 
         if (stream.kind == "ema") {
             ema_activated = true
-            dependsOn computeRMSEEMA, computeDistEMAPerPhoneme
+            dependsOn computeRMSEEMA, computeEucDistEMA,computeDistEMAPerPhoneme
         }
     }
 
@@ -342,6 +387,8 @@ task generateReport() {
     def input_rms_dur = new File("$buildDir/rms_dur.csv")
     def input_rms_bap = new File("$buildDir/rms_bap.csv")
     def input_rms_ema = new File("$buildDir/rms_ema.csv")
+    def ema_input_file = []
+    channels.each { c -> ema_input_file << new File("$buildDir/euc_dist_${c}.csv")}
     def output_f = new File("$buildDir/report.csv")
     outputs.files output_f
 
@@ -424,6 +471,22 @@ task generateReport() {
             values.toArray(dist);
             s = new Statistics(dist);
             output_f << "rms ema\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+
+
+            ema_input_file.eachWithIndex { c_file,i ->
+
+                values = []
+                c_file.eachLine { line ->
+                    if (line.startsWith("#"))
+                        return; // Continue...
+
+                        values << Double.parseDouble(line)
+                }
+                dist = new Double[values.size()];
+                values.toArray(dist);
+                s = new Statistics(dist);
+                output_f << "euc dist ${channels[i]} (cm)\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+            }
         }
     }
 }
