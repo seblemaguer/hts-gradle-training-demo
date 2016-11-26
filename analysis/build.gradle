@@ -291,31 +291,31 @@ task computeRMSEDur() {
         list_file.eachLine { line ->
 
             // Loading first label
-           def ref_dur_list = []
-           (new File("$nat_lab_dir/${line}.lab")).eachLine { label -> // FIXME: hardcoded reference name
-               def elts = label.split()
-               ref_dur_list << (elts[1].toInteger() - elts[0].toInteger())/ 10000
-           }
-           double[][] ref_dur = new double[ref_dur_list.size()][1];
-           ref_dur_list.eachWithIndex {val, idx ->
-               ref_dur[idx][0] = val
-           }
+            def ref_dur_list = []
+            (new File("$nat_lab_dir/${line}.lab")).eachLine { label -> // FIXME: hardcoded reference name
+                def elts = label.split()
+                ref_dur_list << (elts[1].toInteger() - elts[0].toInteger())/ 10000
+            }
+            double[][] ref_dur = new double[ref_dur_list.size()][1];
+            ref_dur_list.eachWithIndex {val, idx ->
+                ref_dur[idx][0] = val
+            }
 
             // Loading first label
-           def synth_dur_list = []
-           (new File("$buildDir/lab/${line}.lab")).eachLine { label -> // FIXME: hardcoded synth name
-               def elts = label.split()
-               synth_dur_list << (elts[1].toInteger() - elts[0].toInteger())/ 10000
-           }
+            def synth_dur_list = []
+            (new File("$buildDir/lab/${line}.lab")).eachLine { label -> // FIXME: hardcoded synth name
+                def elts = label.split()
+                synth_dur_list << (elts[1].toInteger() - elts[0].toInteger())/ 10000
+            }
 
-           double[][] synth_dur = new double[synth_dur_list.size()][1];
-           synth_dur_list.eachWithIndex {val, idx ->
-               synth_dur[idx][0] = val
-           }
+            double[][] synth_dur = new double[synth_dur_list.size()][1];
+            synth_dur_list.eachWithIndex {val, idx ->
+                synth_dur[idx][0] = val
+            }
 
-           if (synth_dur.length != ref_dur.length) {
-               throw new Exception("what ?");
-           }
+            if (synth_dur.length != ref_dur.length) {
+                throw new Exception("what ?");
+            }
 
 
             // Generate path
@@ -370,10 +370,10 @@ task generateReport() {
         }
 
         /*
-        if (stream.kind == "bap") {
-            bap_activated = true
-            dependsOn computeRMSEBAP
-        }
+          if (stream.kind == "bap") {
+          bap_activated = true
+          dependsOn computeRMSEBAP
+          }
         */
 
         if (stream.kind == "ema") {
@@ -404,8 +404,8 @@ task generateReport() {
             if (line.startsWith("#"))
                 return; // Continue...
 
-            def elts = line.split()
-            values << Double.parseDouble(elts[1])
+                def elts = line.split()
+                values << Double.parseDouble(elts[1])
         }
         def dist = new Double[values.size()];
         values.toArray(dist);
@@ -499,106 +499,107 @@ task generateReport() {
  *** Plotting
  ***************************************************************************************************/
 
-task convertNaturalEMAToJson() {
-
-    outputs.files "$buildDir/ema_analysis/json"
-
-    doLast {
-        (new File("$buildDir/ema_analysis/json")).mkdirs()
-
-        list_file.eachLine { line ->
-
-            exec{
-                commandLine "python3 ema2json.py ${nat_dir}/ema/${line}.ema $buildDir/ema_analysis/json/${line}.json".tokenize()
-                workingDir rootProject.ext.utilsDir
-            }
-
-        }
-    }
-}
-
-task gatherGenNatEMAInformations() {
-    dependsOn convertNaturalEMAToJson
-
-    def output_dir = "$buildDir/ema_analysis/csv"
-
-    outputs.files output_dir
-
-    doLast {
-
-        (new File(output_dir)).mkdirs()
-        list_file.eachLine { line ->
-            def output_file = new File("$output_dir/${line}.csv")
-            output_file.text = "id_frame\tcoil\ttype\taxis\tvalue\n"
-
-            def orig_info = slurper.parseText( (new File("$buildDir/ema_analysis/json/${line}.json")).text )
-            def synth_info = slurper.parseText( (new File("${synth_dir}/imposed_dur/${line}.json")).text )
-
-            channels.each { c ->
-
-                orig_info.channels[c].position.eachWithIndex { pos, id ->
-
-                    // Dump info + x
-                    if ((id%3) == 0) {
-                        def id_frame = (id / 3).intValue()
-                        output_file << "$id_frame\t$c\toriginal\tx\t$pos\n"
-                    }
-
-                    // Dump y
-                    if ((id%3) == 1) {
-                        def id_frame = (id / 3).intValue()
-                        output_file << "$id_frame\t$c\toriginal\ty\t$pos\n"
-                    }
-
-                    // Dump z + new line
-                    if ((id%3) == 2) {
-                        def id_frame = (id / 3).intValue()
-                        output_file << "$id_frame\t$c\toriginal\tz\t$pos\n"
-                    }
-                }
-
-                synth_info.channels[c].position.eachWithIndex { pos, id ->
-
-                    // Dump info + x
-                    if ((id%3) == 0) {
-                        def id_frame = (id / 3).intValue()
-                        output_file << "$id_frame\t$c\tsynthesized\tx\t$pos\n"
-                    }
-
-                    // Dump y
-                    if ((id%3) == 1) {
-                        def id_frame = (id / 3).intValue()
-                        output_file << "$id_frame\t$c\tsynthesized\ty\t$pos\n"
-                    }
-
-                    // Dump z + new line
-                    if ((id%3) == 2) {
-                        def id_frame = (id / 3).intValue()
-                        output_file << "$id_frame\t$c\tsynthesized\tz\t$pos\n"
-                    }
-                }
-            }
-        }
-    }
-
-}
+/* Generate the test part */
+(new File(DataFileFinder.getFilePath("list_test"))).each { basename ->
+    project(":$basename") {
+        buildDir = project.parent.buildDir
 
 
-task generateEMATrajectories() {
-    dependsOn gatherGenNatEMAInformations
+        task convertNaturalEMAToJson() {
 
-    def output_dirs = "$buildDir/ema_analysis/plots"
-    channels.each { c ->
-        (new File("$buildDir/ema_analysis/plots/$c")).mkdirs()
-    }
-    outputs.files "$buildDir/ema_analysis/plots"
+            outputs.files "$buildDir/ema_analysis/json"
 
-    doLast {
-        channels.each { c ->
-            list_file.eachLine { line ->
-                exec{
-                    commandLine "Rscript jsonPlotter.R $buildDir/ema_analysis/csv/${line}.csv $c $buildDir/ema_analysis/plots/$c/${line}.pdf".tokenize()
+            doLast {
+                (new File("$buildDir/ema_analysis/json")).mkdirs()
+
+                project.exec {
+                    commandLine "python3 ema2json.py ${nat_dir}/ema/${basename}.ema $buildDir/ema_analysis/json/${basename}.json".tokenize()
                     workingDir rootProject.ext.utilsDir
+                }
+
+            }
+        }
+
+        task gatherGenNatEMAInformations() {
+            dependsOn convertNaturalEMAToJson
+
+            def output_dir = "$buildDir/ema_analysis/csv"
+
+            outputs.files output_dir
+
+            doLast {
+
+                (new File(output_dir)).mkdirs()
+                def output_file = new File("$output_dir/${basename}.csv")
+                output_file.text = "id_frame\tcoil\ttype\taxis\tvalue\n"
+
+                def orig_info = slurper.parseText( (new File("$buildDir/ema_analysis/json/${basename}.json")).text )
+                def synth_info = slurper.parseText( (new File("${synth_dir}/imposed_dur/${basename}.json")).text )
+
+                channels.each { c ->
+
+                    orig_info.channels[c].position.eachWithIndex { pos, id ->
+
+                        // Dump info + x
+                        if ((id%3) == 0) {
+                            def id_frame = (id / 3).intValue()
+                            output_file << "$id_frame\t$c\toriginal\tx\t$pos\n"
+                        }
+
+                        // Dump y
+                        if ((id%3) == 1) {
+                            def id_frame = (id / 3).intValue()
+                            output_file << "$id_frame\t$c\toriginal\ty\t$pos\n"
+                        }
+
+                        // Dump z + new basename
+                        if ((id%3) == 2) {
+                            def id_frame = (id / 3).intValue()
+                            output_file << "$id_frame\t$c\toriginal\tz\t$pos\n"
+                        }
+                    }
+
+                    synth_info.channels[c].position.eachWithIndex { pos, id ->
+
+                        // Dump info + x
+                        if ((id%3) == 0) {
+                            def id_frame = (id / 3).intValue()
+                            output_file << "$id_frame\t$c\tsynthesized\tx\t$pos\n"
+                        }
+
+                        // Dump y
+                        if ((id%3) == 1) {
+                            def id_frame = (id / 3).intValue()
+                            output_file << "$id_frame\t$c\tsynthesized\ty\t$pos\n"
+                        }
+
+                        // Dump z + new basename
+                        if ((id%3) == 2) {
+                            def id_frame = (id / 3).intValue()
+                            output_file << "$id_frame\t$c\tsynthesized\tz\t$pos\n"
+                        }
+                    }
+                }
+            }
+
+        }
+
+
+        task generateEMATrajectories() {
+            dependsOn gatherGenNatEMAInformations
+
+            def output_dirs = "$buildDir/ema_analysis/plots"
+            channels.each { c ->
+                (new File("$buildDir/ema_analysis/plots/$c")).mkdirs()
+            }
+            outputs.files "$buildDir/ema_analysis/plots"
+
+            doLast {
+                channels.each { c ->
+                    project.exec{
+                        commandLine "Rscript jsonPlotter.R $buildDir/ema_analysis/csv/${basename}.csv $c $buildDir/ema_analysis/plots/$c/${basename}.pdf".tokenize()
+                        workingDir rootProject.ext.utilsDir
+                    }
                 }
             }
         }
@@ -606,11 +607,12 @@ task generateEMATrajectories() {
 }
 
 task generatePlots() {
+    list_file.eachLine { basename ->
 
-
-    config.models.cmp.streams.each { stream ->
-        if (stream.kind == "ema") {
-            dependsOn generateEMATrajectories
+        config.models.cmp.streams.each { stream ->
+            if (stream.kind == "ema") {
+                dependsOn "${basename}:generateEMATrajectories"
+            }
         }
     }
 }
