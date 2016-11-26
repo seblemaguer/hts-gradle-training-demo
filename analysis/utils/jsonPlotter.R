@@ -44,4 +44,4 @@ pdf(file = outputName, width = 8, height = 6)
 # Generate the CDF.
 fieldplot
 
-dev.off()
+invisible(dev.off())
