@@ -7,3 +7,6 @@
 [submodule "extraction/buildSrc/gradle-acoustic-parameter-extraction-plugin"]
 	path = extraction/buildSrc/gradle-acoustic-parameter-extraction-plugin
 	url = git@github.com:seblemaguer/gradle-acoustic-parameter-extraction-plugin.git
+[submodule "training/buildSrc/gradle-hts-coefficients-packing-plugin"]
+	path = training/buildSrc/gradle-hts-coefficients-packing-plugin
+	url = git@github.com:seblemaguer/gradle-hts-coefficients-packing-plugin.git
