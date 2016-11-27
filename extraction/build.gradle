@@ -1,0 +1,60 @@
+// "basic" configuration in it
+
+apply plugin: 'groovy'
+apply plugin: 'java'
+
+group 'de.dfki.mary'
+version '0.5.2-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'http://localhost:8081/artifactory/local'
+        credentials {
+            username = findProperty('cloudarkUser')
+            password = findProperty('cloudarkApiKey')
+        }
+    }
+}
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:2.2"
+}
+
+ext {
+    config_file = new File("../src/configuration/" + System.getProperty("eval_name") + ".json")
+}
+
+import groovy.json.* // To load the JSON configuration file
+import java.util.*
+
+def slurper = new JsonSlurper()
+def config = slurper.parseText( config_file.text )
+
+
+/* */
+(new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
+    project(":$basename") {
+        buildDir = project.parent.buildDir
+        config_file = config_file
+        apply plugin: "de.dfki.mary.coefficientextraction"
+    }
+}
+
+/* Generate the test part */
+(new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
+    project(":$basename") {
+        buildDir = project.parent.buildDir
+        apply plugin: "de.dfki.mary.coefficientextraction"
+    }
+}
+
+task extract() {
+    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
+        dependsOn ":${basename}:extract"
+    }
+
+    (new File(DataFileFinder.getFilePath("list_test"))).eachLine { basename ->
+        dependsOn ":${basename}:extract"
+    }
+}

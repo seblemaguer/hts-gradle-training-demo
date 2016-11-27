@@ -17,3 +17,27 @@ include 'services:webservice'
 */
 
 rootProject.name = 'extraction'
+
+import groovy.json.* // To load the JSON configuration file
+import java.util.*
+
+
+def eval_name = System.getProperty("eval_name")
+def slurper = new JsonSlurper()
+def config_file =  new File("../src/configuration/${eval_name}.json")
+def config = slurper.parseText( config_file.text )
+
+// Adapt pathes
+DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
+if (config.data.project_dir) {
+    DataFileFinder.project_path = config.data.project_dir
+}
+
+
+(new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
+    include "$basename"
+}
+
+(new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
+    include "$basename"
+}

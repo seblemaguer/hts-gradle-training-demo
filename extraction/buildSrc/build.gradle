@@ -1,0 +1,21 @@
+apply plugin: 'groovy'
+
+evaluationDependsOnChildren()
+
+allprojects {
+    repositories {
+        jcenter()
+    }
+}
+
+project(':gradle-acoustic-parameter-extraction-plugin') {
+    dependencies {
+        compile "com.googlecode.json-simple:json-simple:1.1"
+        compile group: 'com.googlecode.efficient-java-matrix-library', name: 'core', version: '0.26'
+    }
+}
+
+dependencies {
+    runtime project(':gradle-acoustic-parameter-extraction-plugin')
+}
+
