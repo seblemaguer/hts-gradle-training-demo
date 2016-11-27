@@ -7,6 +7,3 @@
 [submodule "synthesis/utils/pyhts"]
 	path = synthesis/utils/pyhts
 	url = git@bitbucket.org:slemaguer/pyhts.git
-[submodule "weight_estimation"]
-	path = weight_estimation
-	url = git@bitbucket.org:ahewer/gradle-mngu0.git
