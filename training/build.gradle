@@ -40,38 +40,6 @@ def config = slurper.parseText( config_file.text )
 apply plugin: "de.dfki.mary.htsvoicebuilding"
 
 
-task extract {
-    def datasetDir = file("$buildDir/dataset")
-    outputs.dir datasetDir
-
-    doLast {
-        copy {
-            from configurations.data.collect { zipTree(it) }
-            into datasetDir
-        }
-    }
-}
-
-task getProperDir {
-    dependsOn extract
-
-
-    doLast {
-        (new File("$buildDir/weights_js")).mkdirs()
-
-        fileTree(buildDir){include '**/fittedFixedSpeaker.json'}.each { path ->
-            def tmp = path.toString().replaceAll(/\/fittedFixedSpeaker.json/) { all -> "" }
-            tmp = tmp.replaceAll(/.*\//) { all -> "" }
-            tmp = tmp.replaceAll(/json/) { all -> "weight"}
-            copy {
-                from path.getParent()
-                into "$buildDir/weights_js"
-                rename { tmp }
-            }
-        }
-    }
-
-}
 
 /* */
 (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->

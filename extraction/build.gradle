@@ -17,8 +17,14 @@ repositories {
     }
 }
 
+configurations {
+    data
+    tonguemodel
+}
+
 dependencies {
     compile "org.codehaus.groovy:groovy-all:2.2"
+    data group: 'org.m2ci.msp', name: 'mngu0-data-tongueModelWeights-fixedSpeaker', version: '0.1-SNAPSHOT', ext:'zip'
 }
 
 ext {
@@ -32,29 +38,72 @@ def slurper = new JsonSlurper()
 def config = slurper.parseText( config_file.text )
 
 
-/* */
-(new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
-    project(":$basename") {
-        buildDir = project.parent.buildDir
-        config_file = config_file
-        apply plugin: "de.dfki.mary.coefficientextraction"
+/***************************************************************************************
+ ** Stupid weights part (as weights are of course not extracted in a standard way...)
+ ***************************************************************************************/
+
+if (System.getProperty("eval_name").contains("weight"))
+{
+    task extractWeightArchive {
+        def datasetDir = file("$buildDir/dataset/raw")
+        outputs.dir datasetDir
+
+        doLast {
+            copy {
+                from configurations.data.collect { zipTree(it) }
+                into datasetDir
+            }
+        }
+    }
+
+    task cleanDataSetArchitecture {
+        dependsOn extractWeightArchive
+
+        doLast {
+            (new File("$buildDir/weights_js")).mkdirs()
+
+            fileTree("$buildDir/dataset/raw"){include '**/fittedFixedSpeaker.json'}.each { path ->
+                def tmp = path.toString().replaceAll(/\/fittedFixedSpeaker.json/) { all -> "" }
+                tmp = tmp.replaceAll(/.*\//) { all -> "" }
+                tmp = tmp.replaceAll(/json/) { all -> "weight"}
+                copy {
+                    from System.out.println();ath.getParent()
+                    into "$buildDir/weights_js"
+                    rename { tmp }
+                }
+            }
+        }
     }
 }
 
-/* Generate the test part */
-(new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
-    project(":$basename") {
-        buildDir = project.parent.buildDir
-        apply plugin: "de.dfki.mary.coefficientextraction"
+/***************************************************************************************
+ ** Standard extraction
+ ***************************************************************************************/
+if (!System.getProperty("eval_name").contains("weight"))
+{
+    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
+        project(":$basename") {
+            buildDir = project.parent.buildDir
+            config_file = confifig_le
+            apply plugin: "de.dfki.mary.coefficientextraction"
+        }
     }
-}
 
-task extract() {
-    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
-        dependsOn ":${basename}:extract"
+    /* Generate the test part */
+    (new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
+        project(":$basename") {
+            buildDir = project.parent.buildDir
+            apply plugin: "de.dfki.mary.coefficientextraction"
+        }
     }
 
-    (new File(DataFileFinder.getFilePath("list_test"))).eachLine { basename ->
-        dependsOn ":${basename}:extract"
+    task extract() {
+        (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
+            dependsOn ":${basename}:extract"
+        }
+
+        (new File(DataFileFinder.getFilePath("list_test"))).eachLine { basename ->
+            dependsOn ":${basename}:extract"
+        }
     }
 }
