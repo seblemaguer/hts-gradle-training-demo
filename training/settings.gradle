@@ -19,5 +19,3 @@ if (config.data.project_dir) {
 (new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
     include "$basename"
 }
-// (new File("hts")).mkdirs()
-// include "hts"
