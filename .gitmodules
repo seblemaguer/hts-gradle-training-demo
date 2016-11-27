@@ -1,6 +1,3 @@
-[submodule "training/buildSrc/gradle-hts-voicebuilding-plugin"]
-	path = training/buildSrc/gradle-hts-voicebuilding-plugin
-	url = git@github.com:seblemaguer/gradle-hts-voicebuilding-plugin.git
 [submodule "synthesis/utils/pyhts"]
 	path = synthesis/utils/pyhts
 	url = git@bitbucket.org:slemaguer/pyhts.git
