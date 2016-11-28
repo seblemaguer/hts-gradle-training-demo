@@ -1,9 +1,10 @@
 import groovy.json.* // To load the JSON configuration file
 import java.util.*
 
-
 // Specific to this architecture (FIXME: maybe generalize it ?)
 def eval_name = System.getProperty("eval_name")
+rootProject.name = "$eval_name-analysis"
+
 
 def slurper = new JsonSlurper()
 def config_file =  new File("../training/build/raw/config.json") // FIXME: architecture hardcoded
