@@ -28,14 +28,16 @@ dependencies {
 }
 
 
+ext {
+    config_file = new File("../src/configuration/" + System.getProperty("eval_name") + ".json")
+}
+
 import groovy.json.* // To load the JSON configuration file
 import java.util.*
 
 
 def slurper = new JsonSlurper()
-def config_file =  new File(System.getProperty("configuration"))
 def config = slurper.parseText( config_file.text )
-
 
 apply plugin: "de.dfki.mary.htsvoicebuilding"
 
@@ -45,7 +47,7 @@ apply plugin: "de.dfki.mary.htsvoicebuilding"
 (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
     project(":$basename") {
         buildDir = project.parent.buildDir
-        apply plugin: "de.dfki.mary.coefficientextraction"
+        apply plugin: "de.dfki.mary.htspacking"
     }
 }
 
@@ -53,7 +55,7 @@ apply plugin: "de.dfki.mary.htsvoicebuilding"
 (new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
     project(":$basename") {
         buildDir = project.parent.buildDir
-        apply plugin: "de.dfki.mary.coefficientextraction"
+        apply plugin: "de.dfki.mary.htspacking"
     }
 }
 
