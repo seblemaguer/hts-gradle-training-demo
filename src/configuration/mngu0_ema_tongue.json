@@ -41,13 +41,14 @@
                         "thr": "000"
                     },
                     "parameters": {
-                        "channels": [0,8,16,24]
+                        "channels": [0, 8, 16, 24],
+                        "channel_labels":["T3", "T2", "T1", "ref"]
                     },
                     "is_msd": false,
                     "weight": 1,
                     "nblk": 3,
                     "gam": 0,
-                    "order": 11,
+                    "order": 15,
                     "mocc": 10.0,
                     "mdlf": 1.0,
                     "thr": "000",
