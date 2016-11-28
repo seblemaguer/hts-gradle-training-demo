@@ -15,6 +15,30 @@ plugins {
     id 'groovy'
 }
 
+
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+
+
+repositories {
+    maven {
+        url 'http://localhost:8081/artifactory/local'
+        credentials {
+            username = findProperty('cloudarkUser')
+            password = findProperty('cloudarkApiKey')
+        }
+    }
+}
+
+configurations {
+    tonguemodel
+}
+
+dependencies {
+    tonguemodel group: 'org.m2ci.msp', name: 'tonguemodel', version: '0.1-SNAPSHOT', ext: 'zip'
+}
+
 /***************************************************************************************************
  ***
  ***************************************************************************************************/
@@ -39,7 +63,19 @@ def list_file = new File(DataFileFinder.getFilePath("list_test"))
  ***
  ***************************************************************************************************/
 
-task prepareSynthesis() {
+task bootstrapTongueModel {
+    def resourcesDir = file("$buildDir/resources")
+    outputs.dir resourcesDir
+    doLast {
+        copy {
+            from configurations.tonguemodel.collect { zipTree(it) }
+            into resourcesDir
+            eachFile { it.path = it.name }
+        }
+    }
+}
+
+task prepareSynthesis(dependsOn: bootstrapTongueModel) {
 
     def scp =  new File("$buildDir/synth.scp")
     outputs.files scp
@@ -66,8 +102,8 @@ task synthesize(dependsOn:prepareSynthesis) {
     doLast {
         exec {
             workingDir rootProject.projectDir
-            commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", "-P",
-            "-c", config_file, "-v",
+            commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", // "-P",
+            "-c", config_file,
             "-s", "-i", scp, "-o", output_path
         }
     }
@@ -85,7 +121,7 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
     doLast {
         exec {
             workingDir rootProject.projectDir
-            commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", "-P", "-D",
+            commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", "-D", // "-P",
             "-c", config_file,
             "-s", "-i", scp, "-o", output_path
         }
