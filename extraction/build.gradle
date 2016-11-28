@@ -188,7 +188,6 @@ if (!System.getProperty("eval_name").contains("weight"))
     (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
         project(":$basename") {
             buildDir = project.parent.buildDir
-            config_file = confifig_le
             apply plugin: "de.dfki.mary.coefficientextraction"
         }
     }
