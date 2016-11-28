@@ -656,8 +656,8 @@ version '0.1-SNAPSHOT'
 distributions {
   main {
     contents {
-        // from generateReport
-        // from generatePlots
+        from generateReport
+        from generatePlots
         from "$buildDir/$eval_name"
         from "$buildDir/$eval_name"
     }
