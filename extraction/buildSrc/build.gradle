@@ -5,12 +5,14 @@ evaluationDependsOnChildren()
 allprojects {
     repositories {
         jcenter()
+        mavenLocal()
+        // mavenCentral()
     }
 }
 
 project(':gradle-acoustic-parameter-extraction-plugin') {
     dependencies {
-        compile "com.googlecode.json-simple:json-simple:1.1"
+        compile group: "com.googlecode.json-simple", name:"json-simple", version:"1.1"
         compile group: 'com.googlecode.efficient-java-matrix-library', name: 'core', version: '0.26'
     }
 }
@@ -18,4 +20,3 @@ project(':gradle-acoustic-parameter-extraction-plugin') {
 dependencies {
     runtime project(':gradle-acoustic-parameter-extraction-plugin')
 }
-
