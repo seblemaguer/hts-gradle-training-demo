@@ -29,7 +29,7 @@ import java.util.regex.Pattern
  ***************************************************************************************************/
 
 def slurper = new JsonSlurper()
-def config_file =  new File(System.getProperty("configuration"))
+def config_file =  new File("../training/build/raw/config.json")
 def config = slurper.parseText( config_file.text )
 
 def list_file = new File(DataFileFinder.getFilePath("list_test"))
