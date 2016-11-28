@@ -40,7 +40,7 @@ def synth_dir = "$buildDir/../../synthesis/build/output"
 def nat_dir = "$buildDir/../../training/build"
 
 def slurper = new JsonSlurper()
-def config_file =  new File("$nat_dir/raw/${eval_name}.json") // FIXME: nat_dir is not the most accurate name
+def config_file =  new File("$nat_dir/raw/config.json") // FIXME: nat_dir is not the most accurate name
 def config = slurper.parseText( config_file.text )
 
 def list_file = new File(DataFileFinder.getFilePath("list_test"))
@@ -554,7 +554,7 @@ task generateReport() {
 
                 (new File(output_dir)).mkdirs()
                 def output_file = new File("$output_dir/${basename}.csv")
-                output_file.text = "id_frame\tcoil\ttype\taxis\tvalue\n"
+                output_file.text = "id_frame\ttimestamp\tcoil\ttype\taxis\tvalue\n"
 
                 def orig_info = slurper.parseText( (new File("$buildDir/$eval_name/ema_analysis/json/${basename}.json")).text )
                 def synth_info = slurper.parseText( (new File("${synth_dir}/imposed_dur/${basename}.json")).text )
@@ -566,19 +566,22 @@ task generateReport() {
                         // Dump info + x
                         if ((id%3) == 0) {
                             def id_frame = (id / 3).intValue()
-                            output_file << "$id_frame\t$c\toriginal\tx\t$pos\n"
+                            def timestamp = id_frame * config.signal.frameshift / 1000
+                            output_file << "$id_frame\t$timestamp\t$c\tnatural\tx\t$pos\n"
                         }
 
                         // Dump y
                         if ((id%3) == 1) {
                             def id_frame = (id / 3).intValue()
-                            output_file << "$id_frame\t$c\toriginal\ty\t$pos\n"
+                            def timestamp = id_frame * config.signal.frameshift / 1000
+                            output_file << "$id_frame\t$timestamp\t$c\tnatural\ty\t$pos\n"
                         }
 
                         // Dump z + new basename
                         if ((id%3) == 2) {
                             def id_frame = (id / 3).intValue()
-                            output_file << "$id_frame\t$c\toriginal\tz\t$pos\n"
+                            def timestamp = id_frame * config.signal.frameshift / 1000
+                            output_file << "$id_frame\t$timestamp\t$c\tnatural\tz\t$pos\n"
                         }
                     }
 
@@ -587,19 +590,22 @@ task generateReport() {
                         // Dump info + x
                         if ((id%3) == 0) {
                             def id_frame = (id / 3).intValue()
-                            output_file << "$id_frame\t$c\tsynthesized\tx\t$pos\n"
+                            def timestamp = id_frame * config.signal.frameshift / 1000
+                            output_file << "$id_frame\t$timestamp\t$c\tsynthesized\tx\t$pos\n"
                         }
 
                         // Dump y
                         if ((id%3) == 1) {
                             def id_frame = (id / 3).intValue()
-                            output_file << "$id_frame\t$c\tsynthesized\ty\t$pos\n"
+                            def timestamp = id_frame * config.signal.frameshift / 1000
+                            output_file << "$id_frame\t$timestamp\t$c\tsynthesized\ty\t$pos\n"
                         }
 
                         // Dump z + new basename
                         if ((id%3) == 2) {
                             def id_frame = (id / 3).intValue()
-                            output_file << "$id_frame\t$c\tsynthesized\tz\t$pos\n"
+                            def timestamp = id_frame * config.signal.frameshift / 1000
+                            output_file << "$id_frame\t$timestamp\t$c\tsynthesized\tz\t$pos\n"
                         }
                     }
                 }
@@ -644,7 +650,7 @@ task generatePlots() {
  *** Publishing part
  ***************************************************************************************************/
 
-group "analysis-$eval_name"
+group "$eval_name-analysis"
 version '0.1-SNAPSHOT'
 
 distributions {
