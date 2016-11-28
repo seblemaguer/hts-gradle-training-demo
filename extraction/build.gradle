@@ -8,8 +8,13 @@ buildscript {
 }
 // "basic" configuration in it
 
-apply plugin: 'groovy'
-apply plugin: 'java'
+
+
+plugins {
+  id 'distribution'
+  id 'maven-publish'
+  id 'groovy'
+}
 
 group 'de.dfki.mary'
 version '0.5.2-SNAPSHOT'
@@ -209,4 +214,39 @@ task extract() {
     (new File(DataFileFinder.getFilePath("list_test"))).eachLine { basename ->
         dependsOn ":${basename}:extract"
     }
+}
+
+/***************************************************************************************************
+ *** Publishing part
+ ***************************************************************************************************/
+
+group "org.m2ci.msp"
+version '0.1-SNAPSHOT'
+
+distributions {
+  main {
+    contents {
+        from extract
+        config.models.cmp.streams.each { stream ->
+            from "$buildDir/${stream.kind}"
+        }
+    }
+  }
+}
+
+publishing {
+  publications {
+    main(MavenPublication) {
+      artifact distZip
+    }
+  }
+  repositories {
+    maven {
+      url "http://localhost:8081/artifactory/data-snapshot-local/"
+      credentials {
+        username = findProperty('cloudarkUser')
+        password = findProperty('cloudarkApiKey')
+      }
+    }
+  }
 }
