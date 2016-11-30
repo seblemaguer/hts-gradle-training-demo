@@ -58,6 +58,11 @@ if (eval_name.contains("weight")) {
  ** Global distances
  *******************************************************************************************/
 task adaptDurToLab() {
+
+    list_file.eachLine { line ->
+        outputs.files "$buildDir/lab/${line}.lab"
+    }
+
     doLast {
         // FIXME: tmp for debug
         (new File("$buildDir/lab")).mkdirs()
@@ -745,6 +750,73 @@ task generatePlots() {
 }
 
 /***************************************************************************************************
+ *** Decision tree analysis
+ ***************************************************************************************************/
+def root_tree_analysis_dir = "$buildDir/$eval_name/tree_analysis"
+(new File(root_tree_analysis_dir)).mkdirs()
+
+
+task generateListLabels() {
+    dependsOn adaptDurToLab
+    def output_f = new File("$root_tree_analysis_dir/list_labels")
+    outputs.files output_f
+
+    doLast {
+         // Reset content file
+        output_f.text = ""
+
+        // list labels
+        def input_lab_dir = "$buildDir/lab" // FIXME: tmp dir
+        list_file.each { line ->
+            (new File("$input_lab_dir/${line}.lab")).each { line_lab ->
+                def elts = line_lab.split()
+                output_f << elts[2]
+            }
+        }
+    }
+}
+
+
+task generateLabelCounts() {
+    dependsOn adaptDurToLab
+    def output_f = new File("$root_tree_analysis_dir/labels_count.csv")
+    outputs.files output_f
+
+    doLast {
+         // Reset content file
+        output_f.text = "#label\tnb. instances\n"
+
+        // list labels
+        def map_labels = []
+        def input_lab_dir = "$buildDir/lab" // FIXME: tmp dir
+        list_file.each { line ->
+            (new File("$input_lab_dir/${line}.lab")).each { line_lab ->
+                def elts = line_lab.split()
+                if (!(elts[2] in map_labels)) {
+                    map_labels[elts[2]] = 0
+                }
+
+                map_labels[elts[2]] += 1
+            }
+        }
+
+        map_labels.each {lab, nb ->
+            output_f << "$lab\t$b\n"
+        }
+    }
+
+}
+
+
+task decisionTreePathAnalysis() {
+    dependsOn adaptDurToLab
+
+}
+
+task generateTreeAnalysis() {
+    dependsOn generateListLabels, generateLabelCounts
+}
+/***************************************************************************************************
  *** Publishing part
  ***************************************************************************************************/
 
@@ -756,7 +828,7 @@ distributions {
     contents {
         from generateReport
         from generatePlots
-        from "$buildDir/$eval_name"
+        from generateTreeAnalysis
         from "$buildDir/$eval_name"
     }
   }
