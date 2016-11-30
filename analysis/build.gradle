@@ -37,17 +37,17 @@ import groovy.json.*
 // Specific to this architecture (FIXME: maybe generalize it ?)
 def eval_name = System.getProperty("eval_name")
 def synth_dir = "$buildDir/../../synthesis/build/output"
-def nat_dir = "$buildDir/../../training/build"
+def nat_dir = "$buildDir/../../extraction/build"
 
 def slurper = new JsonSlurper()
-def config_file =  new File("$nat_dir/raw/config.json") // FIXME: nat_dir is not the most accurate name
+def config_file =  new File("$buildDir/../../training/build/raw/config.json") // FIXME: nat_dir is not the most accurate name
 def config = slurper.parseText( config_file.text )
 
 def list_file = new File(DataFileFinder.getFilePath("list_test"))
 
 def nat_lab_dir = DataFileFinder.getFilePath(config.data.mono_lab_dir)
 def list = "list_test"
-def channels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
+def channels = ["T3", "T2", "T1", "ref"] // , "jaw", "upperlip", "lowerlip"]
 
 
 /*******************************************************************************************
@@ -168,21 +168,47 @@ task computeRMSEEMA() {
 
         list_file.eachLine { line ->
             //
-            double[][] src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", 21); // FIXME: hardcoded frame size
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", 21); // FIXME: hardcoded frame size
+            double[][] src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
 
             def nb_frames = Math.min(src.length, tgt.length)
 
             // Generate path
             def alignment = new IDAlignment(nb_frames);
-            def v = new RMS(src, tgt, 21); // FIXME: hardcoded frame size
+            def v = new RMS(src, tgt, channels.size()*3); // FIXME: hardcoded frame size
             Double d = v.distancePerUtterance(alignment);
             output_f << "$line\t$d\n";
         }
     }
 }
 
+task JSONToEMA() {
+    doLast {
+        (new File("$buildDir/ema/ori")).mkdirs()
+
+        list_file.eachLine { line ->
+            exec {
+                commandLine "python3 json2ema.py $buildDir/$eval_name/ema_analysis/json/${line}.json $buildDir/ema/ori/${line}.ema".tokenize()
+                workingDir rootProject.ext.utilsDir
+            }
+        }
+
+        // Test
+        (new File("$buildDir/ema/gen")).mkdirs()
+        list_file.eachLine { line ->
+            exec {
+                commandLine "python3 json2ema.py $synth_dir/imposed_dur/${line}.json $buildDir/ema/gen/${line}.ema".tokenize()
+                workingDir rootProject.ext.utilsDir
+            }
+        }
+    }
+}
+
 task computeEucDistEMA() {
+
+    // if (eval_name.contains("weight")) {
+    //     dependsOn JSONToEMA
+    // }
 
     (new File("$buildDir/$eval_name/global")).mkdirs()
     def output_handles = []
@@ -197,14 +223,25 @@ task computeEucDistEMA() {
         def loading = new LoadingHelpers();
         list_file.eachLine { line ->
 
-            //
-            double[][] src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", 21); // FIXME: hardcoded frame size
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", 21); // FIXME: hardcoded frame size
-
+            // FIXME: stupid weight again
+            double[][] src;
+            double[][] tgt;
+            if (eval_name.contains("weight"))
+            {
+                //
+                src = loading.loadFloatBinary("$buildDir/ema/ori/${line}.ema",channels.size()*3); // FIXME: hardcoded frame size
+                tgt = loading.loadFloatBinary("$buildDir/ema/gen/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+            }
+            else
+            {
+                //
+                src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+                tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+            }
 
             // FIXME: hardcoded frame size
             int nb_frames = Math.min(src.length, tgt.length)
-            for (int j=0; j<21; j+=3)
+            for (int j=0; j<channels.size()*3; j+=3)
             {
                 double[][] real_src = new double[nb_frames][3];
                 double[][] real_tgt = new double[nb_frames][3];
@@ -232,17 +269,35 @@ task computeEucDistEMA() {
 task computeDistEMAPerPhoneme() {
     dependsOn adaptDurToLab
 
+    // if (eval_name.contains("weight")) {
+    //     dependsOn JSONToEMA
+    // }
+
     (new File("$buildDir/$eval_name/global")).mkdirs()
-    def output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
-    outputs.files output_f
+    def summary_output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
+    def raw_output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme_raw.csv")
+    outputs.files summary_output_f, raw_output_f
     doLast {
         def loading = new LoadingHelpers();
         def val = [:]
         list_file.eachLine { line ->
 
-            //
-            double[][] src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", 21); // FIXME: hardcoded frame size
-            double[][] tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", 21); // FIXME: hardcoded frame size
+
+            // FIXME: stupid weight again
+            double[][] src;
+            double[][] tgt;
+            if (eval_name.contains("weight"))
+            {
+                //
+                src = loading.loadFloatBinary("$buildDir/ema/ori/${line}.ema",channels.size()*3); // FIXME: hardcoded frame size
+                tgt = loading.loadFloatBinary("$buildDir/ema/gen/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+            }
+            else
+            {
+                //
+                src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+                tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+            }
 
             // Loading first label
             def ref_dur_list = []
@@ -261,7 +316,7 @@ task computeDistEMAPerPhoneme() {
 
                 // FIXME: hardcoded frame size
                 int nb_frames = (end - start).intValue()
-                for (int j=0; j<21; j+=3)
+                for (int j=0; j<channels.size()*3; j+=3)
                 {
                     double[][] real_src = new double[nb_frames][3];
                     double[][] real_tgt = new double[nb_frames][3];
@@ -285,13 +340,25 @@ task computeDistEMAPerPhoneme() {
         }
 
 
-        output_f.text = "#label\tcoil\tnb_val\t\teuc_dist(mm)\tstdev\tconfint\n"
+        // Generate raw
+        raw_output_f.text = "#label\tcoil\tid_frame\teuc_dist(mm)\n"
+        val.each { k,v ->
+            v.eachWithIndex {c,i ->
+                c.eachWithIndex { dist, j ->
+                    raw_output_f << "$k\t" << channels[i] <<"\t" << j << "\t" << dist  << "\n"
+                }
+            }
+        }
+
+
+        // Generate summary
+        summary_output_f.text = "#label\tcoil\tnb_val\teuc_dist(mm)\tstdev\tconfint\n"
         val.each { k,v ->
             v.eachWithIndex {c,i ->
                 def dist = new Double[c.size()];
                 c.toArray(dist);
                 def s = new Statistics(dist);
-                output_f << "$k\t" << channels[i] <<"\t" << c.size() << "\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+                summary_output_f << "$k\t" << channels[i] <<"\t" << c.size() << "\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
             }
         }
     }
@@ -401,6 +468,11 @@ task generateReport() {
             ema_activated = true
             dependsOn computeRMSEEMA, computeEucDistEMA,computeDistEMAPerPhoneme
         }
+
+        if (stream.kind == "weight") {
+            ema_activated = true
+            dependsOn computeEucDistEMA,computeDistEMAPerPhoneme
+        }
     }
 
     dependsOn computeRMSEDur
@@ -486,17 +558,17 @@ task generateReport() {
         // RMS EMA part
         if (ema_activated) {
             values = []
-            input_rms_ema.eachLine { line ->
-                if (line.startsWith("#"))
-                    return; // Continue...
+            // input_rms_ema.eachLine { line ->
+            //     if (line.startsWith("#"))
+            //         return; // Continue...
 
-                    def elts = line.split()
-                    values << Double.parseDouble(elts[1])
-            }
-            dist = new Double[values.size()];
-            values.toArray(dist);
-            s = new Statistics(dist);
-            output_f << "rms ema\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+            //         def elts = line.split()
+            //         values << Double.parseDouble(elts[1])
+            // }
+            // dist = new Double[values.size()];
+            // values.toArray(dist);
+            // s = new Statistics(dist);
+            // output_f << "rms ema\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
 
 
             ema_input_file.eachWithIndex { c_file,i ->
@@ -527,17 +599,36 @@ task generateReport() {
     project(":$basename") {
         buildDir = project.parent.buildDir
 
+        if (eval_name.contains("weight"))
+        {
+            task convertNaturalEMAToJson() {
 
-        task convertNaturalEMAToJson() {
+                outputs.files "$buildDir/$eval_name/ema_analysis/json"
 
-            outputs.files "$buildDir/$eval_name/ema_analysis/json"
+                doLast {
+                    (new File("$buildDir/$eval_name/ema_analysis/json")).mkdirs()
 
-            doLast {
-                (new File("$buildDir/$eval_name/ema_analysis/json")).mkdirs()
+                    project.exec {
+                        commandLine "weights-to-ema-json --input ${nat_dir}/dataset/weights_js/${basename}.json --model ${synth_dir}/../resources/tongue_model.json --output $buildDir/$eval_name/ema_analysis/json/${basename}.json --reference ref --channels T3 T2 T1 --sourceIds 1249 2059 2697".tokenize() // FIXME: harcoded
+                        workingDir rootProject.ext.utilsDir
+                    }
+                }
 
-                project.exec {
-                    commandLine "python3 ema2json.py ${nat_dir}/ema/${basename}.ema $buildDir/$eval_name/ema_analysis/json/${basename}.json".tokenize()
-                    workingDir rootProject.ext.utilsDir
+            }
+        }
+        else
+        {
+            task convertNaturalEMAToJson() {
+
+                outputs.files "$buildDir/$eval_name/ema_analysis/json"
+
+                doLast {
+                    (new File("$buildDir/$eval_name/ema_analysis/json")).mkdirs()
+
+                    project.exec {
+                        commandLine "python3 ema2json.py ${nat_dir}/ema/${basename}.ema $buildDir/$eval_name/ema_analysis/json/${basename}.json".tokenize()
+                        workingDir rootProject.ext.utilsDir
+                    }
                 }
 
             }
@@ -642,6 +733,9 @@ task generatePlots() {
             if (stream.kind == "ema") {
                 dependsOn "${basename}:generateEMATrajectories"
             }
+            // if (stream.kind == "weight") {
+            //     dependsOn "${basename}:generateEMATrajectories"
+            // }
         }
     }
 }
