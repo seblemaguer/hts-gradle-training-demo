@@ -38,9 +38,10 @@ import groovy.json.*
 def eval_name = System.getProperty("eval_name")
 def synth_dir = "$buildDir/../../synthesis/build/output"
 def nat_dir = "$buildDir/../../extraction/build"
+def model_file = "$buildDir/../../training/build/raw/"
 
 def slurper = new JsonSlurper()
-def config_file =  new File("$buildDir/../../training/build/raw/config.json") // FIXME: nat_dir is not the most accurate name
+def config_file =  new File("$model_file/config.json") // FIXME: nat_dir is not the most accurate name
 def config = slurper.parseText( config_file.text )
 
 def list_file = new File(DataFileFinder.getFilePath("list_test"))
@@ -223,6 +224,7 @@ task computeEucDistEMA() {
     def output_handles = []
     channels.each { c ->
         output_handles << new File("$buildDir/$eval_name/global/euc_dist_${c}.csv")
+        outputs.files output_handles
     }
 
     doLast {
@@ -286,6 +288,7 @@ task computeDistEMAPerPhoneme() {
     def summary_output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
     def raw_output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme_raw.csv")
     outputs.files summary_output_f, raw_output_f
+
     doLast {
         def loading = new LoadingHelpers();
         def val = [:]
@@ -753,12 +756,12 @@ task generatePlots() {
  *** Decision tree analysis
  ***************************************************************************************************/
 def root_tree_analysis_dir = "$buildDir/$eval_name/tree_analysis"
+def input_lab_dir = "$buildDir/../../src/mngu0/labels/full/"
 (new File(root_tree_analysis_dir)).mkdirs()
 
 
 task generateListLabels() {
-    dependsOn adaptDurToLab
-    def output_f = new File("$root_tree_analysis_dir/list_labels")
+    def output_f = new File("$root_tree_analysis_dir/list_labels.txt")
     outputs.files output_f
 
     doLast {
@@ -766,19 +769,16 @@ task generateListLabels() {
         output_f.text = ""
 
         // list labels
-        def input_lab_dir = "$buildDir/lab" // FIXME: tmp dir
         list_file.each { line ->
             (new File("$input_lab_dir/${line}.lab")).each { line_lab ->
                 def elts = line_lab.split()
-                output_f << elts[2]
+                output_f << elts[2] << "\n"
             }
         }
     }
 }
 
-
 task generateLabelCounts() {
-    dependsOn adaptDurToLab
     def output_f = new File("$root_tree_analysis_dir/labels_count.csv")
     outputs.files output_f
 
@@ -787,8 +787,7 @@ task generateLabelCounts() {
         output_f.text = "#label\tnb. instances\n"
 
         // list labels
-        def map_labels = []
-        def input_lab_dir = "$buildDir/lab" // FIXME: tmp dir
+        def map_labels = [:]
         list_file.each { line ->
             (new File("$input_lab_dir/${line}.lab")).each { line_lab ->
                 def elts = line_lab.split()
@@ -801,20 +800,56 @@ task generateLabelCounts() {
         }
 
         map_labels.each {lab, nb ->
-            output_f << "$lab\t$b\n"
+            output_f << "$lab\t$nb\n"
         }
     }
-
 }
 
 
-task decisionTreePathAnalysis() {
-    dependsOn adaptDurToLab
+task mapLabelDecisionTreePathes() {
+    dependsOn generateListLabels
 
+    def output_f = new File("$root_tree_analysis_dir/path.txt")
+    outputs.files output_f
+    doLast {
+        def label_list_path = "$root_tree_analysis_dir/list_labels.txt"
+        def tree_path = "$model_file/trees/weight.inf"
+        def state = 4 // FIXME: hardcoded middle state
+        exec {
+            commandLine "perl get_path.pl -s $state $tree_path $label_list_path $output_f".tokenize()
+            workingDir "$rootProject.ext.utilsDir/tree_analysis"
+        }
+    }
+}
+
+task countPaths() {
+    dependsOn mapLabelDecisionTreePathes
+
+    def path_f = new File("$root_tree_analysis_dir/path.txt")
+    def output_f = new File("$root_tree_analysis_dir/path_count.csv")
+    outputs.files output_f
+
+    doLast {
+        output_f.text = "#path;nb. elts\n"
+
+        // list labels
+        def map_paths = [:]
+        path_f.each {line ->
+            if (!(line in map_paths)) {
+                map_paths[line] = 0
+            }
+
+            map_paths[line] += 1
+        }
+
+        map_paths.each {path, nb ->
+            output_f << "$path\t$nb\n"
+        }
+    }
 }
 
 task generateTreeAnalysis() {
-    dependsOn generateListLabels, generateLabelCounts
+    dependsOn generateLabelCounts, countPaths
 }
 /***************************************************************************************************
  *** Publishing part
