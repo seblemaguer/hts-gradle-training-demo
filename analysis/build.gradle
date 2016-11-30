@@ -799,7 +799,7 @@ task generateLabelCounts() {
             }
         }
 
-        map_labels.each {lab, nb ->
+        map_labels.each { lab, nb ->
             output_f << "$lab\t$nb\n"
         }
     }
@@ -809,15 +809,31 @@ task generateLabelCounts() {
 task mapLabelDecisionTreePathes() {
     dependsOn generateListLabels
 
-    def output_f = new File("$root_tree_analysis_dir/path.txt")
+    def output_f= []
+    def kinds = ["dur"]
+    def states = [2]
+
+    config.models.cmp.streams.each { stream ->
+        def kind = stream.kind
+        kinds << kind
+        states << 4
+    }
+    kinds.each { kind ->
+        output_f << new File("$root_tree_analysis_dir/path_${kind}.txt")
+    }
     outputs.files output_f
+
     doLast {
         def label_list_path = "$root_tree_analysis_dir/list_labels.txt"
-        def tree_path = "$model_file/trees/weight.inf"
-        def state = 4 // FIXME: hardcoded middle state
-        exec {
-            commandLine "perl get_path.pl -s $state $tree_path $label_list_path $output_f".tokenize()
-            workingDir "$rootProject.ext.utilsDir/tree_analysis"
+
+
+        kinds.eachWithIndex { kind,i ->
+            def tree_path = "$model_file/trees/${kind}.inf"
+            def state = 4 // FIXME: hardcoded middle state
+            exec {
+                commandLine "perl get_path.pl -s ${states[i]} $tree_path $label_list_path ${output_f[i]}".tokenize()
+                workingDir "$rootProject.ext.utilsDir/tree_analysis"
+            }
         }
     }
 }
@@ -825,25 +841,38 @@ task mapLabelDecisionTreePathes() {
 task countPaths() {
     dependsOn mapLabelDecisionTreePathes
 
-    def path_f = new File("$root_tree_analysis_dir/path.txt")
-    def output_f = new File("$root_tree_analysis_dir/path_count.csv")
+    def output_f = []
+    def path_f = []
+    def kinds = ["dur"]
+
+    config.models.cmp.streams.each { stream ->
+        def kind = stream.kind
+        kinds << kind
+    }
+    kinds.each { kind ->
+        output_f << new File("$root_tree_analysis_dir/path_count_${kind}.csv")
+        path_f << new File("$root_tree_analysis_dir/path_${kind}.txt")
+    }
     outputs.files output_f
 
     doLast {
-        output_f.text = "#path\tnb. elts\n"
 
-        // list labels
-        def map_paths = [:]
-        path_f.each {line ->
-            if (!(line in map_paths)) {
-                map_paths[line] = 0
+        kinds.eachWithIndex { kind,i ->
+            output_f[i].text = "#path\tnb. elts\n"
+
+            // list labels
+            def map_paths = [:]
+            path_f[i].each {line ->
+                if (!(line in map_paths)) {
+                    map_paths[line] = 0
+                }
+
+                map_paths[line] += 1
             }
 
-            map_paths[line] += 1
-        }
-
-        map_paths.each {path, nb ->
-            output_f << "$path\t$nb\n"
+            map_paths.each {path, nb ->
+                output_f[i] << "$path\t$nb\n"
+            }
         }
     }
 }
@@ -851,30 +880,43 @@ task countPaths() {
 task countNodes() {
     dependsOn mapLabelDecisionTreePathes
 
-    def path_f = new File("$root_tree_analysis_dir/path.txt")
-    def output_f = new File("$root_tree_analysis_dir/node_count.csv")
+    def output_f = []
+    def path_f = []
+    def kinds = ["dur"]
+
+    config.models.cmp.streams.each { stream ->
+        def kind = stream.kind
+        kinds << kind
+    }
+    kinds.each { kind ->
+        output_f << new File("$root_tree_analysis_dir/node_count_${kind}.csv")
+        path_f << new File("$root_tree_analysis_dir/path_${kind}.txt")
+    }
     outputs.files output_f
 
     doLast {
-        output_f.text = "#node\tnb. elts\n"
 
-        // list labels
-        def map_nodes = [:]
-        path_f.each {line ->
-            def elts = line.split(" => ")
-            elts.each { elt ->
-                elt = elt.replaceAll(/[!()]/, "")
-                if (!(elt in map_nodes)) {
-                    map_nodes[elt] = 0
+        kinds.eachWithIndex { kind,i ->
+            output_f[i].text = "#node\tnb. elts\n"
+
+            // list labels
+            def map_nodes = [:]
+            path_f[i].each {line ->
+                def elts = line.split(" => ")
+                elts.each { elt ->
+                    elt = elt.replaceAll(/[!()]/, "")
+                    if (!(elt in map_nodes)) {
+                        map_nodes[elt] = 0
+                    }
+
+                    map_nodes[elt] += 1
                 }
-
-                map_nodes[elt] += 1
             }
-        }
 
-        map_nodes = map_nodes.sort {it.value}
-        map_nodes.each {node, nb ->
-            output_f << "$node\t$nb\n"
+            map_nodes = map_nodes.sort {it.value}
+            map_nodes.each {node, nb ->
+                output_f[i] << "$node\t$nb\n"
+            }
         }
     }
 
