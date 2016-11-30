@@ -23,24 +23,24 @@ import subprocess
 
 LEVEL = [logging.WARNING, logging.INFO, logging.DEBUG]
 
-CHANNELS =  ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
+# channels =  ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
 
 ###############################################################################
 # Functions
 ###############################################################################
-def generateJSON(input_filename, output_filename):
+def generateJSON(input_filename, output_filename,channels):
     input_data = np.fromfile(input_filename, dtype=np.float32)
-    nb_frames = int(input_data.size / (len(CHANNELS)*3))
+    nb_frames = int(input_data.size / (len(channels)*3))
 
-    # print("nb_frames = %d, size_frame = %d, total = %d, orig_size = %d" % (nb_frames, len(CHANNELS)*3, len(CHANNELS)*3*nb_frames, input_data.size))
-    input_data = np.reshape(input_data, (nb_frames, len(CHANNELS)*3))
+    # print("nb_frames = %d, size_frame = %d, total = %d, orig_size = %d" % (nb_frames, len(channels)*3, len(channels)*3*nb_frames, input_data.size))
+    input_data = np.reshape(input_data, (nb_frames, len(channels)*3))
 
     with open(output_filename, "w") as output_file:
         output_file.write("{\n")
         output_file.write("\t\"channels\": {\n")
-        for idx_c in range(0, len(CHANNELS)):
+        for idx_c in range(0, len(channels)):
             c = idx_c*3
-            output_file.write("\t\t\"%s\": {\n" % CHANNELS[idx_c])
+            output_file.write("\t\t\"%s\": {\n" % channels[idx_c])
             output_file.write("\t\t\t\"position\": [\n")
 
             # Frame values
@@ -81,7 +81,8 @@ def main():
     """Main entry function
     """
     global args
-    generateJSON(args.input_filename, args.output_filename)
+    channels = args.channels.split(",")
+    generateJSON(args.input_filename, args.output_filename, channels)
 
 ###############################################################################
 #  Envelopping
@@ -93,6 +94,7 @@ if __name__ == '__main__':
         # Add options
         parser.add_argument("-v", "--verbosity", action="count", default=0,
                             help="increase output verbosity")
+        parser.add_argument("-c", "--channels", help="channels separated by comma (ex. T3,T2,...)")
 
         # Add arguments
         parser.add_argument("input_filename", help="binary formatted input")
