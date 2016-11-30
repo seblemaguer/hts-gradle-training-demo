@@ -830,7 +830,7 @@ task countPaths() {
     outputs.files output_f
 
     doLast {
-        output_f.text = "#path;nb. elts\n"
+        output_f.text = "#path\tnb. elts\n"
 
         // list labels
         def map_paths = [:]
@@ -848,8 +848,40 @@ task countPaths() {
     }
 }
 
+task countNodes() {
+    dependsOn mapLabelDecisionTreePathes
+
+    def path_f = new File("$root_tree_analysis_dir/path.txt")
+    def output_f = new File("$root_tree_analysis_dir/node_count.csv")
+    outputs.files output_f
+
+    doLast {
+        output_f.text = "#node\tnb. elts\n"
+
+        // list labels
+        def map_nodes = [:]
+        path_f.each {line ->
+            def elts = line.split(" => ")
+            elts.each { elt ->
+                elt = elt.replaceAll(/[!()]/, "")
+                if (!(elt in map_nodes)) {
+                    map_nodes[elt] = 0
+                }
+
+                map_nodes[elt] += 1
+            }
+        }
+
+        map_nodes = map_nodes.sort {it.value}
+        map_nodes.each {node, nb ->
+            output_f << "$node\t$nb\n"
+        }
+    }
+
+}
+
 task generateTreeAnalysis() {
-    dependsOn generateLabelCounts, countPaths
+    dependsOn generateLabelCounts, countPaths, countNodes
 }
 /***************************************************************************************************
  *** Publishing part
