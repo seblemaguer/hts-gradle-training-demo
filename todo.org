@@ -1,4 +1,4 @@
-* ART./Speech synthesis [81%]
+* ART./Speech synthesis [100%]
 :PROPERTIES:
 :CATEGORY: experiment
 :END:
@@ -29,6 +29,9 @@ CLOSED: [2016-11-13 Sun 09:00]
 CLOSED: [2016-11-13 Sun 09:00]
 ** DONE [#A] Support weight training
 CLOSED: [2016-11-26 Sat 09:52]
-** TODO [#A] Add weight evaluation
-** TODO [#A] Adding deployment for the analysis
-** TODO [#C] Refactor splitting part
+** DONE [#A] Add weight evaluation
+CLOSED: [2016-12-03 Sat 15:49]
+** DONE [#A] Adding deployment for the analysis
+CLOSED: [2016-12-03 Sat 15:49]
+** DONE [#C] Refactor splitting part
+CLOSED: [2016-12-03 Sat 15:49]
