@@ -1,4 +1,4 @@
-* ART./Speech synthesis [100%]
+* ART./Speech synthesis [88%]
 :PROPERTIES:
 :CATEGORY: experiment
 :END:
@@ -35,3 +35,5 @@ CLOSED: [2016-12-03 Sat 15:49]
 CLOSED: [2016-12-03 Sat 15:49]
 ** DONE [#C] Refactor splitting part
 CLOSED: [2016-12-03 Sat 15:49]
+** TODO Adding json summary file
+** TODO Analysis into plugins would be great
