@@ -56,7 +56,7 @@ if (eval_name.contains("weight") || eval_name.contains("tongue")) {
 
 
 /*******************************************************************************************
- ** Global distances
+ ** Utils
  *******************************************************************************************/
 task adaptDurToLab() {
 
@@ -75,6 +75,27 @@ task adaptDurToLab() {
     }
 }
 
+task JSONToEMA() {
+    doLast {
+        (new File("$buildDir/ema/ori")).mkdirs()
+
+        list_file.eachLine { line ->
+            exec {
+                commandLine "python3 json2ema.py $buildDir/$eval_name/ema_analysis/json/${line}.json $buildDir/ema/ori/${line}.ema".tokenize()
+                workingDir rootProject.ext.utilsDir
+            }
+        }
+
+        // Test
+        (new File("$buildDir/ema/gen")).mkdirs()
+        list_file.eachLine { line ->
+            exec {
+                commandLine "python3 json2ema.py $synth_dir/imposed_dur/${line}.json $buildDir/ema/gen/${line}.ema".tokenize()
+                workingDir rootProject.ext.utilsDir
+            }
+        }
+    }
+}
 
 /*******************************************************************************************
  ** Global distances
@@ -192,28 +213,6 @@ task computeRMSEEMA() {
     }
 }
 
-task JSONToEMA() {
-    doLast {
-        (new File("$buildDir/ema/ori")).mkdirs()
-
-        list_file.eachLine { line ->
-            exec {
-                commandLine "python3 json2ema.py $buildDir/$eval_name/ema_analysis/json/${line}.json $buildDir/ema/ori/${line}.ema".tokenize()
-                workingDir rootProject.ext.utilsDir
-            }
-        }
-
-        // Test
-        (new File("$buildDir/ema/gen")).mkdirs()
-        list_file.eachLine { line ->
-            exec {
-                commandLine "python3 json2ema.py $synth_dir/imposed_dur/${line}.json $buildDir/ema/gen/${line}.ema".tokenize()
-                workingDir rootProject.ext.utilsDir
-            }
-        }
-    }
-}
-
 task computeEucDistEMA() {
 
     // if (eval_name.contains("weight")) {
@@ -272,105 +271,6 @@ task computeEucDistEMA() {
                 {
                     output_handles[(j/3).intValue()] << v.distancePerFrame(i, i) << "\n"
                 }
-            }
-        }
-    }
-}
-
-task computeDistEMAPerPhoneme() {
-    dependsOn adaptDurToLab
-
-    // if (eval_name.contains("weight")) {
-    //     dependsOn JSONToEMA
-    // }
-
-    (new File("$buildDir/$eval_name/global")).mkdirs()
-    def summary_output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
-    def raw_output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme_raw.csv")
-    outputs.files summary_output_f, raw_output_f
-
-    doLast {
-        def loading = new LoadingHelpers();
-        def val = [:]
-        list_file.eachLine { line ->
-
-
-            // FIXME: stupid weight again
-            double[][] src;
-            double[][] tgt;
-            if (eval_name.contains("weight"))
-            {
-                //
-                src = loading.loadFloatBinary("$buildDir/ema/ori/${line}.ema",channels.size()*3); // FIXME: hardcoded frame size
-                tgt = loading.loadFloatBinary("$buildDir/ema/gen/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
-            }
-            else
-            {
-                //
-                src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
-                tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
-            }
-
-            // Loading first label
-            def ref_dur_list = []
-            (new File("$nat_lab_dir/${line}.lab")).eachLine { label -> // FIXME: hardcoded reference name
-                def elts = label.split()
-
-                if (!(elts[2] in val)) {
-                    val[elts[2]] = []
-                    for (int i=0;i<7;i++) {
-                        val[elts[2]][i] = []
-                    }
-                }
-
-                def start = elts[0].toInteger() / (10000 * 5)
-                def end = elts[1].toInteger() / (10000 * 5)
-
-                // FIXME: hardcoded frame size
-                int nb_frames = (end - start).intValue()
-                for (int j=0; j<channels.size()*3; j+=3)
-                {
-                    double[][] real_src = new double[nb_frames][3];
-                    double[][] real_tgt = new double[nb_frames][3];
-                    for (int i=0; i<nb_frames; i++)
-                    {
-                        for (int k=0; k<3; k++)
-                        {
-                            real_src[i][k] = src[i][j+k]
-                            real_tgt[i][k] = tgt[i][j+k]
-                        }
-                    }
-
-
-                    def v = new EuclidianDistance(real_src, real_tgt, 3);
-                    for (int i=0; i<nb_frames; i++)
-                    {
-                        val[elts[2]][(j/3).intValue()] << v.distancePerFrame(i, i)
-                    }
-                }
-            }
-        }
-
-
-        // Generate raw
-        raw_output_f.text = "#label\tcoil\tid_frame\teuc_dist(mm)\n"
-        val.each { k,v ->
-            v.eachWithIndex {c,i ->
-                c.eachWithIndex { dist, j ->
-                    raw_output_f << "$k\t" << channels[i] <<"\t" << j << "\t" << dist  << "\n"
-                }
-            }
-        }
-
-
-        // Generate summary
-        summary_output_f.text = "#label\tcoil\tnb_val\teuc_dist(mm)\tstdev\tconfint\n"
-        val.each { k,v ->
-            v.eachWithIndex {c,i ->
-                def dist = new Double[c.size()];
-                c.toArray(dist);
-                def s = new Statistics(dist);
-                summary_output_f << "$k\t" << channels[i] <<"\t" << c.size() << "\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
             }
         }
     }
@@ -451,7 +351,7 @@ task computeMCDIST() {
     }
 }
 
-task generateReport() {
+task generateGlobalReport() {
 
     def ema_activated = false
     def lf0_activated = false
@@ -478,12 +378,12 @@ task generateReport() {
 
         if (stream.kind == "ema") {
             ema_activated = true
-            dependsOn computeRMSEEMA, computeEucDistEMA,computeDistEMAPerPhoneme
+            dependsOn computeRMSEEMA, computeEucDistEMA
         }
 
         if (stream.kind == "weight") {
             ema_activated = true
-            dependsOn computeEucDistEMA,computeDistEMAPerPhoneme
+            dependsOn computeEucDistEMA
         }
     }
 
@@ -601,6 +501,184 @@ task generateReport() {
     }
 }
 
+/*******************************************************************************************
+ ** Specific distances
+ *******************************************************************************************/
+task computeEucDistEMAPerPhoneme() {
+    dependsOn adaptDurToLab
+
+    // if (eval_name.contains("weight")) {
+    //     dependsOn JSONToEMA
+    // }
+
+    (new File("$buildDir/$eval_name/global")).mkdirs()
+    def raw_output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
+    outputs.files raw_output_f
+
+    doLast {
+        // Initialisation
+        def loading = new LoadingHelpers();
+        def val = []
+        raw_output_f.text = "#utt\tid_frame\tlabel\tcoil\teuc_dist(mm)\n"
+
+        list_file.eachLine { line ->
+
+            // FIXME: stupid weight again
+            double[][] src;
+            double[][] tgt;
+            if (eval_name.contains("weight"))
+            {
+                //
+                src = loading.loadFloatBinary("$buildDir/ema/ori/${line}.ema",channels.size()*3); // FIXME: hardcoded frame size
+                tgt = loading.loadFloatBinary("$buildDir/ema/gen/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+            }
+            else
+            {
+                //
+                src = loading.loadFloatBinary("${nat_dir}/ema/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+                tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${line}.ema", channels.size()*3); // FIXME: hardcoded frame size
+            }
+
+            // Loading first label
+            def ref_dur_list = []
+            (new File("$nat_lab_dir/${line}.lab")).eachLine { label -> // FIXME: hardcoded reference name
+                def elts = label.split()
+
+                def start = (elts[0].toInteger() / (10000 * 5)).intValue()
+                def end = (elts[1].toInteger() / (10000 * 5)).intValue()
+
+                // FIXME: hardcoded frame size
+                int nb_frames = end - start
+                for (int j=0; j<channels.size()*3; j+=3)
+                {
+                    double[][] real_src = new double[nb_frames][3];
+                    double[][] real_tgt = new double[nb_frames][3];
+                    for (int i=0; i<nb_frames; i++)
+                    {
+                        for (int k=0; k<3; k++)
+                        {
+                            real_src[i][k] = src[i][j+k]
+                            real_tgt[i][k] = tgt[i][j+k]
+                        }
+                    }
+
+
+                    def v = new EuclidianDistance(real_src, real_tgt, 3);
+                    for (int i=0; i<nb_frames; i++)
+                    {
+                        // val << ["utt":line, "ph":elts[2],"id_frame":start+i,"coil": channels[j/3], "dist":v.distancePerFrame(i, i)]
+                        raw_output_f << line << "\t" << start + i << "\t" << elts[2]  << "\t" << channels[(j/3).intValue()] << "\t" << v.distancePerFrame(i, i) << "\n"
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+task generateJSONFormattedEucDistEmaPerPhoneme() {
+    dependsOn computeEucDistEMAPerPhoneme
+
+
+    def input_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
+    def json_formatted_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.json")
+    outputs.files json_formatted_f
+    doLast {
+
+        // Building map
+        def val = [:]
+        input_f.eachLine { line, count ->
+            if (!line.startsWith("#")) {
+                def elts = line.split()
+                if (!(elts[0] in val)) {
+                    val[elts[0]] = []
+                }
+
+                // FIXME: we assume actually that we sequentially add everything
+                def id_frame = Integer.parseInt(elts[1])
+                if (id_frame >= val[elts[0]].size()) {
+                    val[elts[0]] << [:]
+                    val[elts[0]][id_frame]["coils"] = [:]
+                }
+
+                val[elts[0]][id_frame]["phone"] = elts[2]
+                val[elts[0]][id_frame]["coils"][elts[3]] = [:]
+                val[elts[0]][id_frame]["coils"][elts[3]]["distances"] = [:]
+                val[elts[0]][id_frame]["coils"][elts[3]]["distances"]["euclidian"] = elts[4]
+            }
+        }
+
+        def output_list = []
+        val.each {utt, frames ->
+            frames.eachWithIndex {frame, id_frame ->
+                def tmp = ["utterance":utt, "frame":id_frame, "time":id_frame*0.005] + frame
+                output_list << tmp
+
+            }
+        }
+
+
+        println("ok parsing done now!")
+        // json_formatted_f.withWriter('UTF-8') { w ->
+
+        //     def bw = new BufferedWriter(w)
+        //     def json = new groovy.json.StreamingJsonBuilder(bw)
+        //     json(output_list)
+        // }
+
+        def json = groovy.json.JsonOutput.toJson(output_list)
+        json_formatted_f.text = JsonOutput.prettyPrint(json.toString())
+    }
+}
+
+task generateSpecificReport() {
+    def ema_activated = false
+
+    def input_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
+    def summary_output_f = new File("$buildDir/$eval_name/global/per_phoneme_report.csv")
+    config.models.cmp.streams.each { stream ->
+        if ((stream.kind == "ema") || (stream.kind == "weight")) {
+            ema_activated = true
+            dependsOn computeEucDistEMAPerPhoneme
+            outputs.files summary_output_f
+        }
+    }
+
+    doLast {
+
+        if (ema_activated){
+            // Loading raw information
+            def val = [:]
+            input_f.eachLine { line ->
+                if (!line.startsWith("#")) {
+                    def elts = line.split()
+                    elts.each {
+                        if (!(elts[2] in val)) {
+                            val[elts[2]] = [:]
+                        }
+
+                        if (!(elts[3] in val[elts[2]])) {
+                            val[elts[2]][elts[3]] = []
+                        }
+
+                        val[elts[2]][elts[3]] << Double.parseDouble(elts[4])
+                    }
+                }
+            }
+
+            // Generate summary
+            summary_output_f.text = "#label\tcoil\tnb_val\teuc_dist(mm)\tstdev\tconfint\n"
+            val.each { ph, v ->
+                v.each {coil, d ->
+                    def dist = new Double[d.size()];
+                    d.toArray(dist);
+                    def s = new Statistics(dist);
+                    summary_output_f << ph <<"\t" << coil <<"\t" << d.size() << "\t" << s.mean() << "\t" << s.stddev() << "\t" << s.confint(0.05) << "\n"
+                }
+            }
+        }
+    }
+}
 
 /***************************************************************************************************
  *** Plotting
@@ -805,7 +883,6 @@ task generateLabelCounts() {
     }
 }
 
-
 task mapLabelDecisionTreePathes() {
     dependsOn generateListLabels
 
@@ -925,6 +1002,7 @@ task countNodes() {
 task generateTreeAnalysis() {
     dependsOn generateLabelCounts, countPaths, countNodes
 }
+
 /***************************************************************************************************
  *** Publishing part
  ***************************************************************************************************/
@@ -935,7 +1013,8 @@ version '0.1-SNAPSHOT'
 distributions {
   main {
     contents {
-        from generateReport
+        from generateGlobalReport
+        from generateSpecificReport
         from generatePlots
         from generateTreeAnalysis
         from "$buildDir/$eval_name"
