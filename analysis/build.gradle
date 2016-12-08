@@ -34,14 +34,15 @@ import groovy.json.*
  ***
  ***************************************************************************************************/
 
+
 // Specific to this architecture (FIXME: maybe generalize it ?)
 def eval_name = System.getProperty("eval_name")
-def synth_dir = "$buildDir/../../synthesis/build/output"
-def nat_dir = "$buildDir/../../extraction/build"
-def model_file = "$buildDir/../../training/build/raw/"
+def synth_dir = "${rootProject.projectDir}/../synthesis/build/output"
+def nat_dir = "${rootProject.projectDir}/../extraction/build"
+def model_file = "${rootProject.projectDir}/../training/build/raw/"
 
 def slurper = new JsonSlurper()
-def config_file =  new File("$model_file/config.json") // FIXME: nat_dir is not the most accurate name
+def config_file =  new File("$model_file/config.json")
 def config = slurper.parseText( config_file.text )
 
 def list_file = new File(DataFileFinder.getFilePath("list_test"))
