@@ -664,7 +664,7 @@ task generateSpecificReport() {
     config.models.cmp.streams.each { stream ->
         if ((stream.kind == "ema") || (stream.kind == "weight")) {
             ema_activated = true
-            dependsOn computeEucDistEMAPerPhoneme
+            dependsOn generateJSONFormattedEucDistEmaPerPhoneme
             outputs.files summary_output_f
         }
     }
