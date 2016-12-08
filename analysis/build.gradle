@@ -519,8 +519,8 @@ task computeEucDistEMAPerPhoneme() {
         // Initialisation
         def loading = new LoadingHelpers();
         def val = []
-        raw_output_f.text = "#utt\tid_frame\tlabel\tcoil\teuc_dist(mm)\n"
-
+        raw_output_f.withWriter('UTF-8') { writer ->
+            writer.write("#utt\tid_frame\tlabel\tcoil\teuc_dist(mm)\n")
         list_file.eachLine { line ->
 
             // FIXME: stupid weight again
@@ -562,16 +562,16 @@ task computeEucDistEMAPerPhoneme() {
                         }
                     }
 
-
                     def v = new EuclidianDistance(real_src, real_tgt, 3);
+
                     for (int i=0; i<nb_frames; i++)
                     {
-                        // val << ["utt":line, "ph":elts[2],"id_frame":start+i,"coil": channels[j/3], "dist":v.distancePerFrame(i, i)]
-                        raw_output_f << line << "\t" << start + i << "\t" << elts[2]  << "\t" << channels[(j/3).intValue()] << "\t" << v.distancePerFrame(i, i) << "\n"
+                        writer.write(line + "\t" + (start + i) + "\t" + elts[2]  + "\t" + channels[(j/3).intValue()] + "\t" + v.distancePerFrame(i, i) + "\n")
                     }
                 }
 
             }
+        }
         }
     }
 }
@@ -584,15 +584,41 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
     def json_formatted_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.json")
     outputs.files json_formatted_f
     doLast {
+        def prev_utt = ""
+        double[][] src;
+        double[][] tgt;
+        def loading = new LoadingHelpers();
 
         // Building map
         def val = [:]
         input_f.eachLine { line, count ->
             if (!line.startsWith("#")) {
+
+
                 def elts = line.split()
                 if (!(elts[0] in val)) {
                     val[elts[0]] = []
                 }
+
+
+                if (elts[0] != prev_utt) {
+                    prev_utt = elts[0]
+                    if (eval_name.contains("weight"))
+                    {
+                        //
+                        src = loading.loadFloatBinary("$buildDir/ema/ori/${elts[0]}.ema",channels.size()*3); // FIXME: hardcoded frame size
+                        tgt = loading.loadFloatBinary("$buildDir/ema/gen/${elts[0]}.ema", channels.size()*3); // FIXME: hardcoded frame size
+                    }
+                    else
+                    {
+                        //
+                        src = loading.loadFloatBinary("${nat_dir}/ema/${elts[0]}.ema", channels.size()*3); // FIXME: hardcoded frame size
+                        tgt = loading.loadFloatBinary("${synth_dir}/imposed_dur/${elts[0]}.ema", channels.size()*3); // FIXME: hardcoded frame size
+                    }
+                }
+
+
+
 
                 // FIXME: we assume actually that we sequentially add everything
                 def id_frame = Integer.parseInt(elts[1])
@@ -603,6 +629,14 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
 
                 val[elts[0]][id_frame]["phone"] = elts[2]
                 val[elts[0]][id_frame]["coils"][elts[3]] = [:]
+                ["x", "y", "z"].eachWithIndex { pos, idx ->
+
+                    val[elts[0]][id_frame]["coils"][elts[3]][pos] = [:]
+                    val[elts[0]][id_frame]["coils"][elts[3]][pos]["natural"] = src[id_frame][channels.indexOf(elts[3])+idx]
+                    val[elts[0]][id_frame]["coils"][elts[3]][pos][eval_name] = tgt[id_frame][channels.indexOf(elts[3])+idx]
+
+                }
+
                 val[elts[0]][id_frame]["coils"][elts[3]]["distances"] = [:]
                 val[elts[0]][id_frame]["coils"][elts[3]]["distances"]["euclidian"] = elts[4]
             }
@@ -613,18 +647,8 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
             frames.eachWithIndex {frame, id_frame ->
                 def tmp = ["utterance":utt, "frame":id_frame, "time":id_frame*0.005] + frame
                 output_list << tmp
-
             }
         }
-
-
-        println("ok parsing done now!")
-        // json_formatted_f.withWriter('UTF-8') { w ->
-
-        //     def bw = new BufferedWriter(w)
-        //     def json = new groovy.json.StreamingJsonBuilder(bw)
-        //     json(output_list)
-        // }
 
         def json = groovy.json.JsonOutput.toJson(output_list)
         json_formatted_f.text = JsonOutput.prettyPrint(json.toString())
