@@ -404,6 +404,7 @@ task generateGlobalReport() {
     outputs.files output_f
 
     doLast {
+
         output_f.text = "#id\tmean\tstd\tconfint\n"
 
         // RMS DUR part
@@ -639,7 +640,7 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
                 }
 
                 val[elts[0]][id_frame]["coils"][elts[3]]["distances"] = [:]
-                val[elts[0]][id_frame]["coils"][elts[3]]["distances"]["euclidian"] = elts[4]
+                val[elts[0]][id_frame]["coils"][elts[3]]["distances"]["euclidian"] = Float.parseFloat(elts[4])
             }
         }
 
