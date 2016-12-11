@@ -584,11 +584,22 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
 
     def input_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
     def json_formatted_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.json")
+    def weights_activated = false
+    def dim_weights = 0
+    config.models.cmp.streams.each { stream ->
+        if (stream.kind == "weight") {
+            weights_activated = true
+            dim_weights = stream.order + 1
+        }
+    }
+
     outputs.files json_formatted_f
     doLast {
         def prev_utt = ""
         double[][] src;
         double[][] tgt;
+        double[][] src_weight;
+        double[][] tgt_weight;
         def loading = new LoadingHelpers();
 
         // Building map
@@ -610,6 +621,8 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
                         //
                         src = loading.loadFloatBinary("$buildDir/ema/ori/${elts[0]}.ema",channels.size()*3); // FIXME: hardcoded frame size
                         tgt = loading.loadFloatBinary("$buildDir/ema/gen/${elts[0]}.ema", channels.size()*3); // FIXME: hardcoded frame size
+                        src_weight = loading.loadFloatBinary("$nat_dir/weight/${elts[0]}.weight", dim_weights);
+                        tgt_weight = loading.loadFloatBinary("$synth_dir/imposed_dur/${elts[0]}.weight", dim_weights);
                     }
                     else
                     {
@@ -637,6 +650,12 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
                     val[elts[0]][id_frame]["coils"][elts[3]][pos]["natural"] = src[id_frame][channels.indexOf(elts[3])+idx]
                     val[elts[0]][id_frame]["coils"][elts[3]][pos][eval_name] = tgt[id_frame][channels.indexOf(elts[3])+idx]
 
+                }
+
+                if (weights_activated) {
+                    val[elts[0]][id_frame]["phonemeWeights"] = [:]
+                    val[elts[0]][id_frame]["phonemeWeights"]["natural"] = src_weight[id_frame]
+                    val[elts[0]][id_frame]["phonemeWeights"][eval_name] = tgt_weight[id_frame]
                 }
 
                 val[elts[0]][id_frame]["coils"][elts[3]]["distances"] = [:]
