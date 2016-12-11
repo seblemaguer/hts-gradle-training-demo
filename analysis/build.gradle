@@ -647,8 +647,8 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
                 ["x", "y", "z"].eachWithIndex { pos, idx ->
 
                     val[elts[0]][id_frame]["coils"][elts[3]][pos] = [:]
-                    val[elts[0]][id_frame]["coils"][elts[3]][pos]["natural"] = src[id_frame][channels.indexOf(elts[3])+idx]
-                    val[elts[0]][id_frame]["coils"][elts[3]][pos][eval_name] = tgt[id_frame][channels.indexOf(elts[3])+idx]
+                    val[elts[0]][id_frame]["coils"][elts[3]][pos]["natural"] = src[id_frame][channels.indexOf(elts[3])*3+idx]
+                    val[elts[0]][id_frame]["coils"][elts[3]][pos][eval_name] = tgt[id_frame][channels.indexOf(elts[3])*3+idx]
 
                 }
 
