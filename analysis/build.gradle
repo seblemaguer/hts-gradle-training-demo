@@ -34,6 +34,55 @@ import groovy.json.*
  ***
  ***************************************************************************************************/
 
+def map_class_phone = ["aa": "vowel",
+"ae": "vowel",
+"ah": "vowel",
+"an": "vowel",
+"ao": "vowel",
+"aw": "vowel",
+"ax": "vowel",
+"axr": "approximant",
+"ay": "vowel",
+"b": "labial",
+"ch": "coronal",
+"d": "coronal",
+"dh": "coronal",
+"eh": "vowel",
+"el": "coronal",
+"em": "labial",
+"en": "coronal",
+"er": "approximant",
+"ey": "vowel",
+"f": "labial",
+"g": "dorsal",
+"hh": "glottal",
+"ih": "vowel",
+"ix": "vowel",
+"iy": "vowel",
+"jh": "coronal",
+"k": "dorsal",
+"l": "coronal",
+"m": "labial",
+"n": "coronal",
+"ng": "dorsal",
+"oo": "vowel",
+"ow": "vowel",
+"oy": "vowel",
+"p": "labial",
+"pau": "silence",
+"r": "approximant",
+"s": "coronal",
+"sh": "coronal",
+"t": "coronal",
+"th": "coronal",
+"uh": "vowel",
+"ur": "approximant",
+"uw": "vowel",
+"v": "labial",
+"w": "labial",
+"y": "vowel",
+"z": "coronal",
+"zh": "coronal"]
 
 // Specific to this architecture (FIXME: maybe generalize it ?)
 def eval_name = System.getProperty("eval_name")
@@ -643,6 +692,7 @@ task generateJSONFormattedEucDistEmaPerPhoneme() {
                 }
 
                 val[elts[0]][id_frame]["phone"] = elts[2]
+                val[elts[0]][id_frame]["phone_class"] = map_class_phone[elts[2]]
                 val[elts[0]][id_frame]["coils"][elts[3]] = [:]
                 ["x", "y", "z"].eachWithIndex { pos, idx ->
 
