@@ -265,9 +265,9 @@ task computeRMSEEMA() {
 
 task computeEucDistEMA() {
 
-    // if (eval_name.contains("weight")) {
-    //     dependsOn JSONToEMA
-    // }
+    if (eval_name.contains("weight")) {
+         // dependsOn JSONToEMA
+    }
 
     (new File("$buildDir/$eval_name/global")).mkdirs()
     def output_handles = []
@@ -311,7 +311,7 @@ task computeEucDistEMA() {
                     for (int k=0; k<3; k++)
                     {
                         real_src[i][k] = src[i][j+k]
-                        real_tgt[i][k] = tgt[i][j+k]
+                        real_tgt[i][k] = tgt[i][j+k] / 10
                     }
                 }
 
@@ -558,9 +558,9 @@ task generateGlobalReport() {
 task computeEucDistEMAPerPhoneme() {
     dependsOn adaptDurToLab
 
-    // if (eval_name.contains("weight")) {
-    //     dependsOn JSONToEMA
-    // }
+    if (eval_name.contains("weight")) {
+         // dependsOn JSONToEMA
+    }
 
     (new File("$buildDir/$eval_name/global")).mkdirs()
     def raw_output_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
@@ -609,7 +609,7 @@ task computeEucDistEMAPerPhoneme() {
                         for (int k=0; k<3; k++)
                         {
                             real_src[i][k] = src[i][j+k]
-                            real_tgt[i][k] = tgt[i][j+k]
+                            real_tgt[i][k] = tgt[i][j+k] / 10
                         }
                     }
 
@@ -784,7 +784,7 @@ task generateSpecificReport() {
     project(":$basename") {
         buildDir = project.parent.buildDir
 
-        if (eval_name.contains("weight"))
+        if (false) // (eval_name.contains("weight"))
         {
             task convertNaturalEMAToJson() {
 
@@ -918,9 +918,9 @@ task generatePlots() {
             if (stream.kind == "ema") {
                 dependsOn "${basename}:generateEMATrajectories"
             }
-            // if (stream.kind == "weight") {
-            //     dependsOn "${basename}:generateEMATrajectories"
-            // }
+            if (stream.kind == "weight") {
+        //            dependsOn "${basename}:generateEMATrajectories"
+            }
         }
     }
 }
@@ -1103,7 +1103,7 @@ task generateTreeAnalysis() {
  ***************************************************************************************************/
 
 group "org.m2ci.msp"
-version '0.1-SNAPSHOT'
+version '0.1'
 
 distributions {
   main {
@@ -1125,7 +1125,7 @@ publishing {
   }
   repositories {
     maven {
-      url "http://localhost:8081/artifactory/data-snapshot-local/"
+      url "http://localhost:8081/artifactory/data-release-local/"
       credentials {
         username = findProperty('cloudarkUser')
         password = findProperty('cloudarkApiKey')
