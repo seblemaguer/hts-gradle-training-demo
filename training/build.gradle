@@ -9,7 +9,7 @@ version '0.5.2-SNAPSHOT'
 repositories {
     mavenCentral()
     maven {
-        url 'http://localhost:8081/artifactory/local'
+        url 'http://cloudark:8081/artifactory/local'
         credentials {
             username = findProperty('cloudarkUser')
             password = findProperty('cloudarkApiKey')
@@ -18,18 +18,18 @@ repositories {
 }
 
 configurations {
-    data
-    tonguemodel
+    acoustic
 }
 
 dependencies {
     compile "org.codehaus.groovy:groovy-all:2.2"
-    data group: 'org.m2ci.msp', name: 'mngu0-data-tongueModelWeights-fixedSpeaker', version: '0.1-SNAPSHOT', ext:'zip'
+    acoustic group: 'org.m2ci.msp', name: 'mngu0_straight_dnn', version: '0.1-SNAPSHOT', ext:'zip'
 }
 
 
 ext {
     config_file = new File("../src/configuration/" + System.getProperty("eval_name") + ".json")
+    dataset_root = "$buildDir/dataset/"
 }
 
 import groovy.json.* // To load the JSON configuration file
@@ -42,12 +42,43 @@ def config = slurper.parseText( config_file.text )
 apply plugin: "de.dfki.mary.htsvoicebuilding"
 
 
+task extractDataArchive {
+    def datasetDir = file(dataset_root)
+    outputs.files datasetDir
 
-/* */
+    doLast {
+        copy {
+            from configurations.acoustic.collect { zipTree(it) }
+            into datasetDir
+            eachFile {
+                def newPath = it.relativePath.segments[1..-1].join("/")
+                it.relativePath = RelativePath.parse(true, newPath)
+            }
+        }
+    }
+}
+
+task configure(dependsOn: "extractDataArchive") {
+
+    /* We have also to adapt a little bit the coefficient paths */
+    project.user_configuration.models.cmp.streams.each { stream ->
+        stream.coeffDir = "$dataset_root/${stream.coeffDir}"
+    }
+
+    if (project.user_configuration.models.ffo) {
+        project.user_configuration.models.ffo.streams.each { stream ->
+            stream.coeffDir = "$dataset_root/${stream.coeffDir}"
+        }
+    }
+}
+
+/* Generate the training observation files */
 (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
     project(":$basename") {
         buildDir = project.parent.buildDir
         apply plugin: "de.dfki.mary.htspacking"
+
+        prepareEnvironment.dependsOn project.rootProject.configure
     }
 }
 
@@ -56,6 +87,8 @@ apply plugin: "de.dfki.mary.htsvoicebuilding"
     project(":$basename") {
         buildDir = project.parent.buildDir
         apply plugin: "de.dfki.mary.htspacking"
+
+        prepareEnvironment.dependsOn project.rootProject.configure
     }
 }
 
@@ -66,11 +99,6 @@ task prepareData() {
 
     (new File(DataFileFinder.getFilePath("list_test"))).eachLine { basename ->
         dependsOn ":${basename}:pack"
-    }
-
-    /* We have also to adapt a little bit the coefficient paths */
-    project.user_configuration.models.cmp.streams.each { stream ->
-        stream.coeffDir = "$project.buildDir/${stream.coeffDir}"
     }
 }
 
