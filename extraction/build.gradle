@@ -22,7 +22,7 @@ version '0.5.2-SNAPSHOT'
 repositories {
     mavenCentral()
     maven {
-        url 'http://localhost:8081/artifactory/local'
+        url 'http://cloudark:8081/artifactory/local'
         credentials {
             username = findProperty('cloudarkUser')
             password = findProperty('cloudarkApiKey')
@@ -227,15 +227,20 @@ distributions {
   main {
     contents {
         from extract
+        def cmp = []
         config.models.cmp.streams.each { stream ->
-            into(stream.kind) {
-                from "$buildDir/${stream.kind}"
+            into(stream.coeffDir) {
+                from "$buildDir/${stream.coeffDir}"
             }
+            cmp << stream.coeffDir
         }
+
         if (config.models.ffo) {
             config.models.ffo.streams.each { stream ->
-                into(stream.kind) {
-                    from "$buildDir/${stream.kind}"
+                if (! (stream.coeffDir in cmp)) {
+                    into(stream.coeffDir) {
+                        from "$buildDir/${stream.coeffDir}"
+                    }
                 }
             }
         }
@@ -251,7 +256,7 @@ publishing {
   }
   repositories {
     maven {
-      url "http://localhost:8081/artifactory/data-snapshot-local/"
+      url "http://cloudark:8081/artifactory/data-snapshot-local/"
       credentials {
         username = findProperty('cloudarkUser')
         password = findProperty('cloudarkApiKey')
