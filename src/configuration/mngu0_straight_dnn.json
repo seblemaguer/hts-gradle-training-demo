@@ -112,6 +112,51 @@
                 }
             ]
         },
+        "ffo": {
+            "streams": [
+                {
+                    "coeffDir": "mgc",
+                    "winfiles": [
+                        "win/mgc.win1",
+                        "win/mgc.win2",
+                        "win/mgc.win3"],
+                    "order": 49,
+                    "stats": true,
+                    "kind": "mgc",
+                    "name": "mgc"
+                },
+                {
+                    "coeffDir": "vuv",
+                    "winfiles": ["win/lf0.win1"],
+                    "order": 0,
+                    "stats": false,
+                    "kind": "vuv",
+                    "name": "vuv"
+                },
+                {
+                    "coeffDir": "interpolated_lf0",
+                    "winfiles": [
+                        "win/lf0.win1",
+                        "win/lf0.win2",
+                        "win/lf0.win3"],
+                    "order": 0,
+                    "stats": true,
+                    "kind": "lf0",
+                    "name": "lf0"
+                },
+                {
+                    "coeffDir": "bap",
+                    "winfiles": [
+                        "win/bap.win1",
+                        "win/bap.win2",
+                        "win/bap.win3"],
+                    "order": 24,
+                    "stats": true,
+                    "kind": "bap",
+                    "name": "bap"
+                }
+            ]
+        },
         "global": {
             "nb_emitting_states": 5
         }

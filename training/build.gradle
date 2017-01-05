@@ -61,11 +61,11 @@ apply plugin: "de.dfki.mary.htsvoicebuilding"
 
 task prepareData() {
     (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
-        dependsOn ":${basename}:generateCMP"
+        dependsOn ":${basename}:pack"
     }
 
     (new File(DataFileFinder.getFilePath("list_test"))).eachLine { basename ->
-        dependsOn ":${basename}:generateCMP"
+        dependsOn ":${basename}:pack"
     }
 
     /* We have also to adapt a little bit the coefficient paths */
