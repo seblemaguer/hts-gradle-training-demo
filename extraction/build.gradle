@@ -228,7 +228,16 @@ distributions {
     contents {
         from extract
         config.models.cmp.streams.each { stream ->
-            from "$buildDir/${stream.kind}"
+            into(stream.kind) {
+                from "$buildDir/${stream.kind}"
+            }
+        }
+        if (config.models.ffo) {
+            config.models.ffo.streams.each { stream ->
+                into(stream.kind) {
+                    from "$buildDir/${stream.kind}"
+                }
+            }
         }
     }
   }
