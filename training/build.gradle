@@ -102,6 +102,8 @@ task prepareData() {
     }
 }
 
+prepareEnvironment.dependsOn prepareData
+
 /*
 task finalize(dependsOn: run) {
     doLast {

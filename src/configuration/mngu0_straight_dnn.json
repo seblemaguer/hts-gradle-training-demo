@@ -195,6 +195,9 @@
             "beam": "1500 100 5000",
             "nIte": 1,
             "nb_clustering":2
+        },
+        "dnn": {
+            "qconf": "questions/en_US.talk.conf"
         }
     },
     "signal": {
