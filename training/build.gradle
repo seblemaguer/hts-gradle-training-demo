@@ -8,6 +8,7 @@ version '0.5.2-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven {
         url 'http://cloudark:8081/artifactory/local'
         credentials {
@@ -23,7 +24,7 @@ configurations {
 
 dependencies {
     compile "org.codehaus.groovy:groovy-all:2.2"
-    acoustic group: 'org.m2ci.msp', name: 'mngu0_straight_dnn', version: '0.1-SNAPSHOT', ext:'zip'
+    acoustic group: 'org.m2ci.msp', name: System.getProperty("eval_name"), version: '0.1-SNAPSHOT', ext:'zip'
 }
 
 
