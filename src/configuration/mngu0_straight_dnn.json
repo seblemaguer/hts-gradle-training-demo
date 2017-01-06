@@ -197,7 +197,21 @@
             "nb_clustering":2
         },
         "dnn": {
-            "qconf": "questions/en_US.talk.conf"
+            "qconf": "questions/en_US.talk.conf",
+            "num_hidden_units": "[1024, 1024, 1024]",
+            "hidden_activation": "Sigmoid",
+            "optimizer": "Adam",
+            "learning_rate": 0.001,
+            "keep_prob": 0.5,
+            "use_queue": 0,
+            "queue_size": 5000,
+            "batch_size": 256,
+            "num_epochs": 50,
+            "num_threads": 0,
+            "random_seed": 12345,
+            "num_models_to_keep": 5,
+            "log_interval": 100,
+            "save_interval": 5000
         }
     },
     "signal": {
