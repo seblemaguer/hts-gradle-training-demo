@@ -163,7 +163,8 @@
     },
     "settings": {
         "synthesis": {
-            "kind": "straight",
+            "generator": "dnn"
+            "renderer": "straight",
             "maxemiter": 20,
             "tree_ext": "inf",
             "gv" : {
@@ -194,7 +195,8 @@
             "maxdev": 10,
             "beam": "1500 100 5000",
             "nIte": 1,
-            "nb_clustering":2
+            "nb_clustering":2,
+            "kind":"dnn"
         },
         "dnn": {
             "qconf": "questions/en_US.talk.conf",
