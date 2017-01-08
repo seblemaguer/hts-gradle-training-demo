@@ -163,7 +163,7 @@
     },
     "settings": {
         "synthesis": {
-            "generator": "dnn"
+            "generator": "dnn",
             "renderer": "straight",
             "maxemiter": 20,
             "tree_ext": "inf",
