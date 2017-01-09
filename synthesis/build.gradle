@@ -23,7 +23,7 @@ plugins {
 
 repositories {
     maven {
-        url 'http://localhost:8081/artifactory/local'
+        url 'http://cloudark:8081/artifactory/local'
         credentials {
             username = findProperty('cloudarkUser')
             password = findProperty('cloudarkApiKey')
@@ -82,7 +82,16 @@ task prepareSynthesis(dependsOn: bootstrapTongueModel) {
     doLast {
         scp.text = ""
         list_file.eachLine { basename ->
-            scp << DataFileFinder.getFilePath(config.data.full_lab_dir)
+            def rootPath = DataFileFinder.getFilePath(config.data.full_lab_dir)
+            if (rootPath.startsWith("/"))
+            {
+                scp << rootPath
+            }
+            else
+            {
+                scp << "$rootProject.projectDir/$rootPath"
+            }
+
             scp << "/${basename}.lab" << "\n"
         }
     }
@@ -101,9 +110,9 @@ task synthesize(dependsOn:prepareSynthesis) {
 
     doLast {
         exec {
-            workingDir rootProject.projectDir
-            commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", // "-P",
-            "-c", config_file,
+            workingDir "utils/pyhts/synthesis/"
+            commandLine "python3", "synth.py", "-R", // "-P",
+            "-c", "$rootProject.projectDir/$config_file",
             "-s", "-i", scp, "-o", output_path
         }
     }
@@ -120,9 +129,9 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
 
     doLast {
         exec {
-            workingDir rootProject.projectDir
+            workingDir "utils/pyhts/synthesis/"
             commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", "-D", // "-P",
-            "-c", config_file,
+            "-c", "$rootProject.projectDir/$config_file",
             "-s", "-i", scp, "-o", output_path
         }
     }

@@ -10,9 +10,3 @@ DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.lo
 if (config.data.project_dir) {
     DataFileFinder.project_path = config.data.project_dir
 }
-
-
-(new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
-    (new File("tmp/$basename")).mkdirs()
-    include "tmp/$basename"
-}
