@@ -130,8 +130,8 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
     doLast {
         exec {
             workingDir "utils/pyhts/synthesis/"
-            commandLine "python3", "utils/pyhts/synthesis/synth.py", "-R", "-D", // "-P",
-            "-c", "$rootProject.projectDir/$config_file",
+            commandLine "python3", "synth.py", "-R", "-D", "-P",
+            "-c", "$rootProject.projectDir/$config_file", "-v",
             "-s", "-i", scp, "-o", output_path
         }
     }
