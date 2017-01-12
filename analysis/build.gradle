@@ -15,10 +15,30 @@ plugins {
   id 'maven-publish'
 }
 
+repositories {
+    mavenCentral()
+    mavenLocal()
+    maven {
+        url 'http://cloudark:8081/artifactory/local'
+        credentials {
+            username = findProperty('cloudarkUser')
+            password = findProperty('cloudarkApiKey')
+        }
+    }
+}
 
+configurations {
+    acoustic
+}
+
+dependencies {
+    acoustic group: 'org.m2ci.msp', name: System.getProperty("eval_name"), version: '0.1-SNAPSHOT', ext:'zip'
+}
 
 ext {
     utilsDir = file("$rootDir/utils")
+    config_file = new File("../src/configuration/" + System.getProperty("eval_name") + ".json")
+    dataset_root = "$buildDir/dataset/"
 }
 
 
@@ -87,7 +107,7 @@ def map_class_phone = ["aa": "vowel",
 // Specific to this architecture (FIXME: maybe generalize it ?)
 def eval_name = System.getProperty("eval_name")
 def synth_dir = "${rootProject.projectDir}/../synthesis/build/output"
-def nat_dir = "${rootProject.projectDir}/../extraction/build"
+def nat_dir = dataset_root
 def model_file = "${rootProject.projectDir}/../training/build/raw/"
 
 def slurper = new JsonSlurper()
@@ -147,10 +167,28 @@ task JSONToEMA() {
     }
 }
 
+task extractDataArchive {
+    def datasetDir = file(dataset_root)
+    outputs.files datasetDir
+
+    doLast {
+        copy {
+            from configurations.acoustic.collect { zipTree(it) }
+            into datasetDir
+            eachFile {
+                def newPath = it.relativePath.segments[1..-1].join("/")
+                it.relativePath = RelativePath.parse(true, newPath)
+            }
+        }
+    }
+}
+
+
 /*******************************************************************************************
  ** Global distances
  *******************************************************************************************/
 task computeRMSEF0() {
+    dependsOn extractDataArchive
     (new File("$buildDir/$eval_name/global")).mkdirs()
     def output_f = new File("$buildDir/$eval_name/global/rms_f0.csv")
     outputs.files output_f
@@ -195,6 +233,8 @@ task computeRMSEF0() {
 }
 
 task computeVUVRate() {
+
+    dependsOn extractDataArchive
     (new File("$buildDir/$eval_name/global")).mkdirs()
     def output_f = new File("$buildDir/$eval_name/global/voice_error.csv")
     outputs.files output_f
@@ -240,6 +280,7 @@ task computeVUVRate() {
 
 task computeRMSEEMA() {
 
+    dependsOn extractDataArchive
     (new File("$buildDir/$eval_name/global")).mkdirs()
     def output_f = new File("$buildDir/$eval_name/global/rms_ema.csv")
     outputs.files output_f
@@ -264,6 +305,8 @@ task computeRMSEEMA() {
 }
 
 task computeEucDistEMA() {
+
+    dependsOn extractDataArchive
 
     if (eval_name.contains("weight")) {
          // dependsOn JSONToEMA
@@ -363,7 +406,7 @@ task computeRMSEDur() {
             }
 
             if (synth_dur.length != ref_dur.length) {
-                throw new Exception("what ?");
+                throw new Exception("what ? ${synth_dur.length} != ${ref_dur.length}");
             }
 
 
@@ -378,6 +421,7 @@ task computeRMSEDur() {
 
 task computeMCDIST() {
 
+    dependsOn extractDataArchive
     (new File("$buildDir/$eval_name/global")).mkdirs()
     def output_f = new File("$buildDir/$eval_name/global/mcdist.csv")
     outputs.files output_f
@@ -629,6 +673,7 @@ task computeEucDistEMAPerPhoneme() {
 
 task generateJSONFormattedEucDistEmaPerPhoneme() {
     dependsOn computeEucDistEMAPerPhoneme
+    dependsOn extractDataArchive
 
 
     def input_f = new File("$buildDir/$eval_name/global/dist_euc_ema_per_phoneme.csv")
@@ -788,6 +833,7 @@ task generateSpecificReport() {
         {
             task convertNaturalEMAToJson() {
 
+                dependsOn extractDataArchive
                 outputs.files "$buildDir/$eval_name/ema_analysis/json"
 
                 doLast {
@@ -805,6 +851,7 @@ task generateSpecificReport() {
         {
             task convertNaturalEMAToJson() {
 
+                dependsOn extractDataArchive
                 outputs.files "$buildDir/$eval_name/ema_analysis/json"
 
                 doLast {
