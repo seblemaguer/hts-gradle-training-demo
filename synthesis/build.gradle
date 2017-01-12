@@ -12,7 +12,9 @@ buildscript {
 }
 
 plugins {
-    id 'groovy'
+  id 'distribution'
+  id 'maven-publish'
+  id 'groovy'
 }
 
 
@@ -51,7 +53,6 @@ import java.util.regex.Pattern
 /***************************************************************************************************
  ***
  ***************************************************************************************************/
-
 def slurper = new JsonSlurper()
 def config_file =  new File("../training/build/raw/config.json")
 def config = slurper.parseText( config_file.text )
@@ -111,8 +112,8 @@ task synthesize(dependsOn:prepareSynthesis) {
     doLast {
         exec {
             workingDir "utils/pyhts/synthesis/"
-            commandLine "python3", "synth.py", "-R", // "-P",
-            "-c", "$rootProject.projectDir/$config_file",
+            commandLine "python3", "-u", "-B", "synth.py", "-R", "-P",
+            "-c", "$rootProject.projectDir/$config_file", // "-v",
             "-s", "-i", scp, "-o", output_path
         }
     }
@@ -131,7 +132,7 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
         exec {
             workingDir "utils/pyhts/synthesis/"
             commandLine "python3", "synth.py", "-R", "-D", "-P",
-            "-c", "$rootProject.projectDir/$config_file", "-v",
+            "-c", "$rootProject.projectDir/$config_file", // "-v",
             "-s", "-i", scp, "-o", output_path
         }
     }
@@ -139,3 +140,37 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
 
 tasks.build.dependsOn "synthesize"
 tasks.build.dependsOn "synthesizeImposedDuration"
+
+
+/***************************************************************************************************
+ *** Publishing part
+ ***************************************************************************************************/
+
+group "org.m2ci.msp"
+version '0.1-SNAPSHOT'
+
+distributions {
+  main {
+    contents {
+        from synthesize
+        from synthesizeImposedDuration
+    }
+  }
+}
+
+publishing {
+  publications {
+    main(MavenPublication) {
+      artifact distZip
+    }
+  }
+  repositories {
+    maven {
+      url "http://cloudark:8081/artifactory/data-snapshot-local/"
+      credentials {
+        username = findProperty('cloudarkUser')
+        password = findProperty('cloudarkApiKey')
+      }
+    }
+  }
+}
