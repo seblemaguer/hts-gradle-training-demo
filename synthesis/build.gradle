@@ -111,10 +111,10 @@ task synthesize(dependsOn:prepareSynthesis) {
 
     doLast {
         exec {
-            workingDir "utils/pyhts/synthesis/"
-            commandLine "python3", "-u", "-B", "synth.py", "-R", "-P",
+            workingDir "utils/pyhts/"
+            commandLine "python3", "-u", "-B", "synth.py", "-r", "-P", "20",
             "-c", "$rootProject.projectDir/$config_file", // "-v",
-            "-s", "-i", scp, "-o", output_path
+            "-s", scp, output_path
         }
     }
 }
@@ -130,10 +130,10 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
 
     doLast {
         exec {
-            workingDir "utils/pyhts/synthesis/"
-            commandLine "python3", "synth.py", "-R", "-D", "-P",
+            workingDir "utils/pyhts/"
+            commandLine "python3", "synth.py", "-r", "-D", "-P", "20",
             "-c", "$rootProject.projectDir/$config_file", // "-v",
-            "-s", "-i", scp, "-o", output_path
+            "-s", scp, output_path
         }
     }
 }
