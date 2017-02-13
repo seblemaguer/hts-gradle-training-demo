@@ -11,9 +11,7 @@
             "spause",
             "insp"
         ],
-        "use": true,
-        "disable_force_alignment":true,
-        "label_dir": "labels/mono"
+        "use": true
     },
     "models": {
         "dur": {
@@ -64,7 +62,8 @@
     },
     "settings": {
         "synthesis": {
-            "kind":"ema",
+            "generator": "dnn",
+            "renderer": "ema",
             "maxemiter": 20,
             "tree_ext": "inf",
             "gv" : {
@@ -82,7 +81,7 @@
             }
         },
         "extraction": {
-            "kind":"ema"
+            "kind":"emadnn"
         },
         "daem": {
             "alpha": 1.0,

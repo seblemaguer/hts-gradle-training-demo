@@ -28,89 +28,6 @@
         "cmp": {
             "streams": [
                 {
-                    "coeffDir": "mgc",
-                    "winfiles": [
-                        "win/mgc.win1",
-                        "win/mgc.win2",
-                        "win/mgc.win3"],
-                    "gv": {
-                        "gam": "000",
-                        "mdlf": 1.0,
-                        "thr": "000"
-                    },
-                    "parameters" : {
-                        "use_lngain": false,
-                        "gamma":0,
-                        "pf_mcp":1.4,
-                        "pf_lsp":0.7,
-                        "implen":4096,
-                        "fftlen":2048
-                    },
-                    "is_msd": false,
-                    "weight": 1,
-                    "nblk": 3,
-                    "gam": 0,
-                    "order": 49,
-                    "mocc": 10.0,
-                    "mdlf": 1.0,
-                    "thr": "000",
-                    "vflr": 0.01,
-                    "kind": "mgc",
-                    "name": "mgc"
-                },
-                {
-                    "coeffDir": "lf0",
-                    "winfiles": [
-                        "win/lf0.win1",
-                        "win/lf0.win2",
-                        "win/lf0.win3"],
-                    "gv": {
-                        "gam": "000",
-                        "mdlf": 1.0,
-                        "thr": "000"
-                    },
-                    "parameters" : {
-                        "lower_f0":60,
-                        "upper_f0":300
-                    },
-                    "is_msd": true,
-                    "weight": 1,
-                    "nblk": 1,
-                    "gam": 0,
-                    "order": 0,
-                    "mocc": 10.0,
-                    "mdlf": 1.0,
-                    "thr": "000",
-                    "vflr": 0.01,
-                    "kind": "lf0",
-                    "name": "lf0"
-                },
-                {
-                    "coeffDir": "bap",
-                    "winfiles": [
-                        "win/bap.win1",
-                        "win/bap.win2",
-                        "win/bap.win3"],
-                    "gv": {
-                        "gam": "000",
-                        "mdlf": 1.0,
-                        "thr": "000"
-                    },
-                    "parameters" : {
-                    },
-                    "is_msd": false,
-                    "weight": 0,
-                    "nblk": 3,
-                    "gam": 0,
-                    "order": 24,
-                    "mocc": 10.0,
-                    "mdlf": 1.0,
-                    "thr": "000",
-                    "vflr": 0.01,
-                    "kind": "bap",
-                    "name": "bap"
-                },
-                {
                     "coeffDir": "ema",
                     "winfiles": [
                         "win/mgc.win1",
@@ -121,15 +38,34 @@
                         "mdlf": 1.0,
                         "thr": "000"
                     },
+                    "parameters": {
+                        "channels": [0, 8, 16, 24],
+                        "channel_labels":["T3", "T2", "T1", "ref"]
+                    },
                     "is_msd": false,
                     "weight": 1,
                     "nblk": 3,
                     "gam": 0,
-                    "order": 20,
+                    "order": 11,
                     "mocc": 10.0,
                     "mdlf": 1.0,
                     "thr": "000",
                     "vflr": 0.01,
+                    "kind": "ema",
+                    "name": "ema"
+                }
+            ]
+        },
+        "ffo": {
+            "streams": [
+                {
+                    "coeffDir": "ema",
+                    "winfiles": [
+                        "win/mgc.win1",
+                        "win/mgc.win2",
+                        "win/mgc.win3"],
+                    "order": 11,
+		            "stats": true,
                     "kind": "ema",
                     "name": "ema"
                 }
@@ -142,7 +78,7 @@
     "settings": {
         "synthesis": {
             "generator": "default",
-            "renderer": "straightema",
+            "renderer": "ema",
             "maxemiter": 20,
             "tree_ext": "inf",
             "gv" : {
@@ -160,7 +96,7 @@
             }
         },
         "extraction": {
-            "kind":"straightema"
+            "kind":"emadnn"
         },
         "daem": {
             "alpha": 1.0,
@@ -173,7 +109,25 @@
             "maxdev": 10,
             "beam": "1500 100 5000",
             "nIte": 1,
-            "nb_clustering":2
+            "nb_clustering":2,
+            "kind":"dnn"
+        },
+        "dnn": {
+            "qconf": "questions/en_US.talk.conf",
+            "num_hidden_units": "[1024, 1024, 1024]",
+            "hidden_activation": "Sigmoid",
+            "optimizer": "Adam",
+            "learning_rate": 0.001,
+            "keep_prob": 0.5,
+            "use_queue": 0,
+            "queue_size": 5000,
+            "batch_size": 256,
+            "num_epochs": 50,
+            "num_threads": 0,
+            "random_seed": 12345,
+            "num_models_to_keep": 5,
+            "log_interval": 100,
+            "save_interval": 5000
         }
     },
     "signal": {
@@ -189,6 +143,7 @@
         "text_dir":"text",
         "alignment_dir":"lab",
         "wav_dir": "wav",
+        "ema_dir": "ema",
         "list_files": "list_training",
         "scp": "scp/train.scp"
     },
