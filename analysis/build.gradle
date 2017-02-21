@@ -29,10 +29,12 @@ repositories {
 
 configurations {
     acoustic
+    ema
 }
 
 dependencies {
     acoustic group: 'org.m2ci.msp', name: System.getProperty("eval_name"), version: '0.1-SNAPSHOT', ext:'zip'
+    ema group: 'org.m2ci.msp', name: "mngu0_ema_tongue", version: '0.1-SNAPSHOT', ext:'zip'
 }
 
 ext {
@@ -128,7 +130,34 @@ if (eval_name.contains("weight") || eval_name.contains("tongue")) {
 /*******************************************************************************************
  ** Utils
  *******************************************************************************************/
+
+task extractDataArchive {
+    def datasetDir = file(dataset_root)
+    outputs.files datasetDir
+
+    doLast {
+        copy {
+            from configurations.acoustic.collect { zipTree(it) }
+            into datasetDir
+            eachFile {
+                def newPath = it.relativePath.segments[1..-1].join("/")
+                it.relativePath = RelativePath.parse(true, newPath)
+            }
+        }
+
+
+        copy {
+            from configurations.ema.collect { zipTree(it) }
+            into datasetDir
+            eachFile {
+                def newPath = it.relativePath.segments[1..-1].join("/")
+                it.relativePath = RelativePath.parse(true, newPath)
+            }
+        }
+    }
+}
 task adaptDurToLab() {
+    // dependsOn "extractDataArchive"
 
     list_file.eachLine { line ->
         outputs.files "$buildDir/lab/${line}.lab"
@@ -146,12 +175,16 @@ task adaptDurToLab() {
 }
 
 task JSONToEMA() {
+    dependsOn "extractDataArchive"
     doLast {
         (new File("$buildDir/ema/ori")).mkdirs()
 
         list_file.eachLine { line ->
+            copy {
+
+            }
             exec {
-                commandLine "python3 json2ema.py $buildDir/$eval_name/ema_analysis/json/${line}.json $buildDir/ema/ori/${line}.ema".tokenize()
+                commandLine "python3 json2ema.py $buildDir/ema/ema_analysis/json/${line}.json $buildDir/ema/ori/${line}.ema".tokenize()
                 workingDir rootProject.ext.utilsDir
             }
         }
@@ -160,24 +193,8 @@ task JSONToEMA() {
         (new File("$buildDir/ema/gen")).mkdirs()
         list_file.eachLine { line ->
             exec {
-                commandLine "python3 json2ema.py $synth_dir/imposed_dur/${line}.json $buildDir/ema/gen/${line}.ema".tokenize()
+                commandLine "python3 json2ema.py $synth_dir/imposed_dur/${line}_ema.json $buildDir/ema/gen/${line}.ema".tokenize()
                 workingDir rootProject.ext.utilsDir
-            }
-        }
-    }
-}
-
-task extractDataArchive {
-    def datasetDir = file(dataset_root)
-    outputs.files datasetDir
-
-    doLast {
-        copy {
-            from configurations.acoustic.collect { zipTree(it) }
-            into datasetDir
-            eachFile {
-                def newPath = it.relativePath.segments[1..-1].join("/")
-                it.relativePath = RelativePath.parse(true, newPath)
             }
         }
     }
@@ -309,7 +326,7 @@ task computeEucDistEMA() {
     dependsOn extractDataArchive
 
     if (eval_name.contains("weight")) {
-         // dependsOn JSONToEMA
+        dependsOn JSONToEMA
     }
 
     (new File("$buildDir/$eval_name/global")).mkdirs()
@@ -1172,7 +1189,7 @@ publishing {
   }
   repositories {
     maven {
-      url "http://localhost:8081/artifactory/data-release-local/"
+      url "http://cloudark:8081/artifactory/data-release-local/"
       credentials {
         username = findProperty('cloudarkUser')
         password = findProperty('cloudarkApiKey')
