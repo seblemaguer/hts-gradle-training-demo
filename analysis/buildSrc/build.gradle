@@ -1,0 +1,21 @@
+apply plugin: 'groovy'
+
+evaluationDependsOnChildren()
+
+allprojects {
+    repositories {
+        jcenter()
+        mavenLocal()
+    }
+}
+
+project(':gradle-tts-evaluation-plugin') {
+    dependencies {
+        compile group: "com.googlecode.json-simple", name:"json-simple", version:"1.1"
+        compile group: 'com.googlecode.efficient-java-matrix-library', name: 'core', version: '0.26'
+    }
+}
+
+dependencies {
+    runtime project(':gradle-tts-evaluation-plugin')
+}
