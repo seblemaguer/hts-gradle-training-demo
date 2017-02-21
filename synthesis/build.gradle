@@ -138,8 +138,8 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
     }
 }
 
-tasks.build.dependsOn "synthesize"
-tasks.build.dependsOn "synthesizeImposedDuration"
+task achieve(dependsOn:["synthesize", "synthesizeImposedDuration"]) {
+}
 
 
 /***************************************************************************************************
@@ -152,8 +152,19 @@ version '0.1-SNAPSHOT'
 distributions {
   main {
     contents {
-        from synthesize
-        from synthesizeImposedDuration
+        from achieve
+        from "$buildDir/output"
+
+        /* Exclude huge files */
+        exclude { override ->
+            override.file.path.matches('.*.sp')
+        }
+        exclude { override ->
+            override.file.path.matches('.*.f0')
+        }
+        exclude { override ->
+            override.file.path.matches('.*.ap')
+        }
     }
   }
 }
