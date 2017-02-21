@@ -45,6 +45,7 @@ dependencies {
  ***
  ***************************************************************************************************/
 
+import static groovy.io.FileType.FILES
 import groovy.json.* // To load the JSON configuration file
 import java.util.*
 import java.util.regex.Matcher
@@ -119,6 +120,26 @@ task synthesize(dependsOn:prepareSynthesis) {
     }
 }
 
+task convertDurationToLab() { // (dependsOn: synthesize) {
+    new File( "$buildDir/output/normal").eachFileRecurse(FILES) {
+        if(it.name.endsWith('.dur')) {
+            outputs.files it.toString().replace(".dur", ".lab")
+        }
+    }
+
+    doLast {
+        new File( "$buildDir/output/normal").eachFileRecurse(FILES) {
+            if (it.name.endsWith('.dur')) {
+                def dur = it
+                def lab = it.toString().replace(".dur", ".lab")
+                exec {
+                    commandLine "perl", "utils/duration2htk.pl", dur, lab
+                }
+            }
+        }
+    }
+}
+
 task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
 
     def scp = new File("$buildDir/synth.scp")
@@ -138,7 +159,7 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
     }
 }
 
-task achieve(dependsOn:["synthesize", "synthesizeImposedDuration"]) {
+task achieve(dependsOn:["convertDurationToLab", "synthesizeImposedDuration"]) {
 }
 
 
