@@ -13,3 +13,6 @@
 [submodule "analysis/buildSrc/gradle-tts-evaluation-plugin"]
 	path = analysis/buildSrc/gradle-tts-evaluation-plugin
 	url = git@github.com:seblemaguer/gradle-tts-evaluation-plugin.git
+[submodule "analysis/buildSrc/gradle-ema-evaluation-plugin"]
+	path = analysis/buildSrc/gradle-ema-evaluation-plugin
+	url = git@github.com:seblemaguer/gradle-ema-evaluation-plugin.git
