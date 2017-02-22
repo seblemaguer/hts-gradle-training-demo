@@ -120,7 +120,7 @@ task synthesize(dependsOn:prepareSynthesis) {
     }
 }
 
-task convertDurationToLab() { // (dependsOn: synthesize) {
+task convertDurationToLab(dependsOn: synthesize) {
     new File( "$buildDir/output/normal").eachFileRecurse(FILES) {
         if(it.name.endsWith('.dur')) {
             outputs.files it.toString().replace(".dur", ".lab")
