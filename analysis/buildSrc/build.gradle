@@ -12,6 +12,10 @@ allprojects {
 project(':gradle-tts-evaluation-plugin') {
 }
 
+project(':gradle-ema-evaluation-plugin') {
+}
+
 dependencies {
     runtime project(':gradle-tts-evaluation-plugin')
+    runtime project(':gradle-ema-evaluation-plugin')
 }

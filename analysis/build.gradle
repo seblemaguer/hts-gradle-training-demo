@@ -107,10 +107,12 @@ task adaptDurToLab() {
 }
 
 
-apply plugin: "de.dfki.mary.ttsanalysis"
+// apply plugin: "de.dfki.mary.ttsanalysis"
+apply plugin: "de.dfki.mary.emaevaluation"
 
 task generateGlobalReport() {
-    dependsOn "generateAcousticReport"
+    //dependsOn "generateAcousticReport"
+    dependsOn "generateEMAReport"
 }
 
 /***************************************************************************************************
