@@ -1,1 +1,2 @@
+include 'gradle-ema-evaluation-plugin'
 include 'gradle-tts-evaluation-plugin'
