@@ -46,10 +46,6 @@ def slurper = new JsonSlurper()
 def config_file =  new File("$model_file/config.json")
 def config = slurper.parseText( config_file.text )
 
-def channels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
-if (eval_name.contains("weight") || eval_name.contains("tongue")) {
-    channels = ["T3", "T2", "T1", "ref"]
-}
 
 
 /*******************************************************************************************
@@ -115,14 +111,25 @@ task configuration() {
 
         ext.mgc_dim = 50;
         ext.channels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
+        if (eval_name.contains("weight") || eval_name.contains("tongue")) {
+           ext.channels = ["T3", "T2", "T1"] // , "ref"]
+        }
 }
 
 apply plugin: "de.dfki.mary.ttsanalysis"
 apply plugin: "de.dfki.mary.emaevaluation"
 
 task generateGlobalReport() {
-    dependsOn "generateAcousticReport"
-    dependsOn "generateEMAReport"
+    def acoustic = true
+    def ema = true
+
+    if (eval_name.contains("straight")) {
+        dependsOn "generateAcousticReport"
+    }
+
+    if (eval_name.contains("ema") || eval_name.contains("weight")) {
+        dependsOn "generateEMAReport"
+    }
 }
 
 /***************************************************************************************************
