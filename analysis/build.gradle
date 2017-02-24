@@ -158,10 +158,18 @@ apply plugin: "de.dfki.mary.ttsanalysis"
 apply plugin: "de.dfki.mary.emaevaluation"
 
 task generateGlobalReport() {
+    dependsOn "configuration"
     dependsOn "generateAcousticReport"
-    dependsOn "generateEMAReport"
+
+    if (configuration.reference_dir.containsKey("ema")) {
+        dependsOn "generateEMAReport"
+    }
 
     def output_f = new File("$buildDir/output/global_report.csv")
+
+    // FIXME: ignore the output one and revalidate this one
+    //outputs.files output_f
+
     doLast {
 
         output_f.text = "#id\tmean\tstd\tconfint\n"
@@ -172,10 +180,12 @@ task generateGlobalReport() {
             }
         }
 
-        generateEMAReport.output_f.eachLine { line ->
-            if (!line.startsWith("#"))
-            {
-                output_f << line << "\n"
+        if (configuration.reference_dir.containsKey("ema")) {
+            generateEMAReport.output_f.eachLine { line ->
+                if (!line.startsWith("#"))
+                {
+                    output_f << line << "\n"
+                }
             }
         }
     }
