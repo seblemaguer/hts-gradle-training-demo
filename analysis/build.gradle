@@ -124,8 +124,12 @@ task configuration() {
                 ext.reference_dir["ema"] = "../extraction/build/ema"
                 ext.synthesize_dir["ema"] = "../synthesis/build/output/imposed_dur"
 
-                ext.channel_labels = stream.parameters.channel_labels
-                ext.channels = stream.parameters.channels
+                if (stream.containsKey("parameters") &&
+                    stream.parameters.containsKey("channel_labels"))
+                {
+                    ext.channel_labels = stream.parameters.channel_labels
+                    ext.channels = stream.parameters.channels
+                }
             }
             else if (stream.kind == "weight")
             {
@@ -138,10 +142,13 @@ task configuration() {
 
                 ext.weight_dim = stream.order + 1
 
-                ext.channel_labels = stream.parameters.channel_labels
-                ext.channels = stream.parameters.channels
+                if (stream.containsKey("parameters") &&
+                    stream.parameters.containsKey("channel_labels"))
+                {
+                    ext.channel_labels = stream.parameters.channel_labels
+                    ext.channels = stream.parameters.channels
+                }
             }
-
         }
 
         ext.id_expe = eval_name
@@ -151,11 +158,27 @@ apply plugin: "de.dfki.mary.ttsanalysis"
 apply plugin: "de.dfki.mary.emaevaluation"
 
 task generateGlobalReport() {
-    def acoustic = true
-    def ema = true
-
     dependsOn "generateAcousticReport"
     dependsOn "generateEMAReport"
+
+    def output_f = new File("$buildDir/output/global_report.csv")
+    doLast {
+
+        output_f.text = "#id\tmean\tstd\tconfint\n"
+        generateAcousticReport.output_f.eachLine { line ->
+            if (!line.startsWith("#"))
+            {
+                output_f << line << "\n"
+            }
+        }
+
+        generateEMAReport.output_f.eachLine { line ->
+            if (!line.startsWith("#"))
+            {
+                output_f << line << "\n"
+            }
+        }
+    }
 }
 
 /***************************************************************************************************
