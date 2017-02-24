@@ -100,22 +100,48 @@ task configuration() {
         ext.nb_proc = nb_proc
 
         ext.list_basenames = new File(DataFileFinder.getFilePath("list_test")) as String[]
-        ext.reference_dir = ["mgc": "../extraction/build/mgc",   \
-                             "lf0": "../extraction/build/lf0",          \
-                             "dur": DataFileFinder.getFilePath(config.data.full_lab_dir), \
-                             "ema": "../extraction/build/ema"]
-        ext.synthesize_dir = ["mgc": "../synthesis/build/output/imposed_dur", \
-                              "lf0": "../synthesis/build/output/imposed_dur", \
-                              "dur": "../synthesis/build/output/normal", \
-                              "ema": "../synthesis/build/output/imposed_dur"]
 
-        ext.mgc_dim = 50;
+        // Now let's proceed per stream
         ext.channel_labels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
         ext.channels = [0, 8, 16, 24, 32, 40, 48]
-        if (eval_name.contains("weight") || eval_name.contains("tongue")) {
-           ext.channels = ["T3", "T2", "T1"] // , "ref"]
-           ext.channels = [0, 8, 16]
-           ext.weight_dim = 13 
+        ext.reference_dir = ["dur": DataFileFinder.getFilePath(config.data.full_lab_dir)]
+        ext.synthesize_dir = ["dur": "../synthesis/build/output/normal"]
+
+        config.models.cmp.streams.each { stream ->
+            if (stream.kind == "mgc")
+            {
+                ext.reference_dir["mgc"] = "../extraction/build/mgc"
+                ext.synthesize_dir["mgc"] = "../synthesis/build/output/imposed_dur"
+                ext.mgc_dim = 50
+            }
+            else if (stream.kind == "lf0")
+            {
+                ext.reference_dir["lf0"] = "../extraction/build/lf0"
+                ext.synthesize_dir["lf0"] = "../synthesis/build/output/imposed_dur"
+            }
+            else if (stream.kind == "ema")
+            {
+                ext.reference_dir["ema"] = "../extraction/build/ema"
+                ext.synthesize_dir["ema"] = "../synthesis/build/output/imposed_dur"
+
+                ext.channel_labels = stream.parameters.channel_labels
+                ext.channels = stream.parameters.channels
+            }
+            else if (stream.kind == "weight")
+            {
+                ext.reference_dir["ema"] = "../extraction/build/ema"
+                ext.synthesize_dir["ema"] = "../synthesis/build/output/imposed_dur"
+
+
+                ext.reference_dir["weight"] = "../extraction/build/weight"
+                ext.synthesize_dir["weight"] = "../synthesis/build/output/imposed_dur"
+
+                ext.weight_dim = stream.order + 1
+
+                ext.channel_labels = stream.parameters.channel_labels
+                ext.channels = stream.parameters.channels
+            }
+
         }
 
         ext.id_expe = eval_name
@@ -128,13 +154,8 @@ task generateGlobalReport() {
     def acoustic = true
     def ema = true
 
-    if (eval_name.contains("straight")) {
-        dependsOn "generateAcousticReport"
-    }
-
-    if (eval_name.contains("ema") || eval_name.contains("weight")) {
-        dependsOn "generateEMAReport"
-    }
+    dependsOn "generateAcousticReport"
+    dependsOn "generateEMAReport"
 }
 
 /***************************************************************************************************
@@ -148,6 +169,7 @@ distributions {
   main {
     contents {
         from generateGlobalReport
+        from "$buildDir/output"
     }
   }
 }
