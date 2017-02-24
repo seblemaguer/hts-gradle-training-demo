@@ -110,10 +110,15 @@ task configuration() {
                               "ema": "../synthesis/build/output/imposed_dur"]
 
         ext.mgc_dim = 50;
-        ext.channels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
+        ext.channel_labels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
+        ext.channels = [0, 8, 16, 24, 32, 40, 48]
         if (eval_name.contains("weight") || eval_name.contains("tongue")) {
            ext.channels = ["T3", "T2", "T1"] // , "ref"]
+           ext.channels = [0, 8, 16]
+           ext.weight_dim = 13 
         }
+
+        ext.id_expe = eval_name
 }
 
 apply plugin: "de.dfki.mary.ttsanalysis"
