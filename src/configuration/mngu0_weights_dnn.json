@@ -59,8 +59,7 @@
                         "channels": [0, 8, 16],
                         "sourceIds": [1249, 2059, 2697],
                         "ref":"ref",
-                        "tongue_model":"/local/slemaguer/work/expes/current/mngu0_weight_hts2.3/synthesis/build/resources/tongue_model.json"
-
+                        "tongue_model":"/local/slemaguer/work/expes/current/mngu0_weights_dnn/synthesis/build/resources/tongue_model.json"
                     },
                     "is_msd": false,
                     "weight": 1,
@@ -80,9 +79,15 @@
             "streams": [
                 {
                     "coeffDir": "weight",
+                    "winfiles": [
+                        "win/mgc.win1",
+                        "win/mgc.win2",
+                        "win/mgc.win3"],
                     "stats": true,
+                    "order": 12,
                     "kind": "weight",
-                    "name": "weight"
+                    "name": "weight",
+                    "tongue_model":"/local/slemaguer/work/expes/current/mngu0_weights_dnn/synthesis/build/resources/tongue_model.json"
                 }
             ]
         },
