@@ -51,10 +51,6 @@ def slurper = new JsonSlurper()
 def config = slurper.parseText( config_file.text )
 
 
-/***************************************************************************************
- ** Stupid weights part (as weights are of course not extracted in a standard way...)
- ***************************************************************************************/
-
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
@@ -73,136 +69,21 @@ import org.json.simple.JSONArray;
 import org.json.simple.parser.ParseException;
 import org.json.simple.parser.JSONParser;
 
-if (System.getProperty("eval_name").contains("weight"))
-{
-
-    def NB_WEIGHTS = 13;
-    def FLOAT_SIZE = Float.SIZE/8; // Float size in nb bytes...
-    task extractWeightArchive {
-        def datasetDir = file("$buildDir/dataset/raw")
-        outputs.files datasetDir
-
-        doLast {
-            copy {
-                from configurations.data.collect { zipTree(it) }
-                into datasetDir
-            }
-        }
-    }
-
-    task cleanDataSetArchitecture {
-        dependsOn extractWeightArchive
-
-        doLast {
-            (new File("$buildDir/dataset/weights_js")).mkdirs()
-            (new File("$buildDir/weight/")).mkdirs() // FIXME: misplaced
-
-            fileTree("$buildDir/dataset/raw"){include '**/fittedFixedSpeaker.json'}.each { path ->
-                def tmp = path.toString().replaceAll(/\/fittedFixedSpeaker.json/) { all -> "" }
-                tmp = tmp.replaceAll(/.*\//) { all -> "" }
-                copy {
-                    from path.getParent()
-                    into "$buildDir/dataset/weights_js"
-                    rename { tmp }
-                }
-            }
-        }
-    }
-
-
-    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
-        project(":$basename") {
-            buildDir = project.parent.buildDir
-
-            project.task('extract') {
-
-                dependsOn ":cleanDataSetArchitecture"
-
-                def input_filename = "$buildDir/dataset/weights_js/${basename}.json"
-                inputs.files input_filename
-                File output_file = new File("$buildDir/weight/${basename}.json");
-                outputs.files output_file
-
-                doLast {
-                    JSONParser parser = new JSONParser();
-                    JSONArray frames = (JSONArray) parser.parse(new FileReader(input_filename));
-
-                    ByteBuffer bf = ByteBuffer.allocate((frames.size()*NB_WEIGHTS*FLOAT_SIZE).intValue());
-                    bf.order(ByteOrder.LITTLE_ENDIAN);
-
-                    for (Object frame: frames)
-                    {
-                        JSONArray weights = (JSONArray) ((JSONObject) frame).get("phonemeWeights");
-                        for (Object weight: weights)
-                        {
-                            bf.putFloat(((Double)weight).floatValue());
-                        }
-                    }
-
-                    // Output
-                    Files.write(output_file.toPath(), bf.array());
-                }
-            }
-        }
-    }
-
-    /* Generate the test part */
-    (new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
-        project(":$basename") {
-            buildDir = project.parent.buildDir
-
-            project.task('extract') {
-
-                dependsOn ":cleanDataSetArchitecture"
-
-                def input_filename = "$buildDir/dataset/weights_js/${basename}.json"
-                inputs.files input_filename
-                File output_file = new File("$buildDir/weight/${basename}.weight");
-                outputs.files output_file
-
-                doLast {
-                    JSONParser parser = new JSONParser();
-                    JSONArray frames = (JSONArray) parser.parse(new FileReader(input_filename));
-
-
-                    ByteBuffer bf = ByteBuffer.allocate((frames.size()*NB_WEIGHTS*FLOAT_SIZE).intValue());
-                    bf.order(ByteOrder.LITTLE_ENDIAN);
-
-                    for (Object frame: frames)
-                    {
-                        JSONArray weights = (JSONArray) ((JSONObject) frame).get("phonemeWeights");
-                        for (Object weight: weights)
-                        {
-                            bf.putFloat(((Double)weight).floatValue());
-                        }
-                    }
-
-                    // Output
-                    Files.write(output_file.toPath(), bf.array());
-                }
-            }
-        }
-    }
-}
-
 /***************************************************************************************
  ** Standard extraction
  ***************************************************************************************/
-if (!System.getProperty("eval_name").contains("weight"))
-{
-    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
-        project(":$basename") {
-            buildDir = project.parent.buildDir
-            apply plugin: "de.dfki.mary.coefficientextraction"
-        }
+(new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
+    project(":$basename") {
+        buildDir = project.parent.buildDir
+        apply plugin: "de.dfki.mary.coefficientextraction"
     }
+}
 
-    /* Generate the test part */
-    (new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
-        project(":$basename") {
-            buildDir = project.parent.buildDir
-            apply plugin: "de.dfki.mary.coefficientextraction"
-        }
+/* Generate the test part */
+(new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
+    project(":$basename") {
+        buildDir = project.parent.buildDir
+        apply plugin: "de.dfki.mary.coefficientextraction"
     }
 }
 
