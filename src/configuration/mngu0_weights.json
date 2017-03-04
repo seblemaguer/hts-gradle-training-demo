@@ -30,7 +30,7 @@
         "cmp": {
             "streams": [
                 {
-                    "coeffDir": "weight",
+                    "coeffDir": "weights",
                     "winfiles": [
                         "win/mgc.win1",
                         "win/mgc.win2",
@@ -55,7 +55,8 @@
                             -0.15819098395942569,
                             -0.02757950798362481
                         ],
-                        "channels": ["T3", "T2", "T1"],
+                        "channel_labels": ["T3", "T2", "T1"],
+                        "channels": [0, 8, 16],
                         "sourceIds": [1249, 2059, 2697],
                         "ref":"ref",
                         "tongue_model":"/local/slemaguer/work/expes/current/mngu0_weight_hts2.3/synthesis/build/resources/tongue_model.json"
