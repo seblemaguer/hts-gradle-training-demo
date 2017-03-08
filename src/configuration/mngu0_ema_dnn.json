@@ -92,7 +92,7 @@
             }
         },
         "extraction": {
-            "kind":"emadnn"
+            "kind":"ema"
         },
         "daem": {
             "alpha": 1.0,
