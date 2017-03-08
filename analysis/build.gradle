@@ -1,6 +1,6 @@
 plugins {
-  id 'distribution'
-  id 'maven-publish'
+    id 'distribution'
+    id 'maven-publish'
 }
 
 repositories {
@@ -15,21 +15,28 @@ repositories {
     }
 }
 
-configurations {
-    acoustic
-    ema
-}
-
-dependencies {
-    acoustic group: 'org.m2ci.msp', name: System.getProperty("eval_name"), version: '0.1-SNAPSHOT', ext:'zip'
-    ema group: 'org.m2ci.msp', name: "mngu0_ema_tongue", version: '0.1-SNAPSHOT', ext:'zip'
-}
-
 ext {
     utilsDir = file("$rootDir/utils")
     config_file = new File("../src/configuration/" + System.getProperty("eval_name") + ".json")
     dataset_root = "$buildDir/dataset/"
+
+    // FIXME: hardcoded part
+    labelsName = "mngu0_labels"
+    dataVersion = '0.1'
 }
+
+configurations {
+    acoustic
+    ema
+    labels
+}
+
+dependencies {
+    // labels group: 'org.m2ci.msp', name: labelsName, version: dataVersion, ext: 'zip'
+    acoustic group: 'org.m2ci.msp', name: System.getProperty("eval_name"), version: '0.1-SNAPSHOT', ext:'zip'
+    ema group: 'org.m2ci.msp', name: "mngu0_ema_tongue", version: '0.1-SNAPSHOT', ext:'zip'
+}
+
 
 
 import groovy.json.*
@@ -58,6 +65,15 @@ task extractDataArchive {
 
     doLast {
         copy {
+            from configurations.labels.collect { zipTree(it) }
+            into datasetDir
+            eachFile {
+                def newPath = it.relativePath.segments[1..-1].join("/")
+                it.relativePath = RelativePath.parse(true, newPath)
+            }
+        }
+
+        copy {
             from configurations.acoustic.collect { zipTree(it) }
             into datasetDir
             eachFile {
@@ -78,80 +94,81 @@ task extractDataArchive {
     }
 }
 
+
 task configuration() {
-        DataFileFinder.project_path =
-            new File(getClass().protectionDomain.codeSource.location.path).parent
-        if (config.data.project_dir) {
-            DataFileFinder.project_path = config.data.project_dir
+    DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
+    if (config.data.project_dir) {
+        DataFileFinder.project_path = config.data.project_dir
+    }
+
+    // See for number of processes for parallel mode
+    def nb_proc = 1
+    if (project.gradle.startParameter.getMaxWorkerCount() != 0) {
+        nb_proc = Runtime.getRuntime().availableProcessors(); // By default the number of core
+        if (config.settings.nb_proc) {
+            if (config.settings.nb_proc > nb_proc) {
+                throw Exception("You will overload your machine, preventing stop !")
+            }
+
+            nb_proc = config.settings.nb_proc
         }
+    }
+    ext.nb_proc = nb_proc
 
-        // See for number of processes for parallel mode
-        def nb_proc = 1
-        if (project.gradle.startParameter.getMaxWorkerCount() != 0) {
-            nb_proc = Runtime.getRuntime().availableProcessors(); // By default the number of core
-            if (config.settings.nb_proc) {
-                if (config.settings.nb_proc > nb_proc) {
-                    throw Exception("You will overload your machine, preventing stop !")
-                }
+    ext.list_basenames = new File(DataFileFinder.getFilePath("list_test")) as String[]
+    ext.lab_dir = DataFileFinder.getFilePath(config.data.mono_lab_dir)
 
-                nb_proc = config.settings.nb_proc
-            }
+    // Now let's proceed per stream
+    ext.channel_labels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
+    ext.channels = [0, 8, 16, 24, 32, 40, 48]
+    ext.reference_dir = ["dur": DataFileFinder.getFilePath(config.data.full_lab_dir)]
+    ext.synthesize_dir = ["dur": "../synthesis/build/output/normal"]
+
+    config.models.cmp.streams.each { stream ->
+        if (stream.kind == "mgc")
+        {
+            ext.reference_dir["mgc"] = "../extraction/build/mgc"
+            ext.synthesize_dir["mgc"] = "../synthesis/build/output/imposed_dur"
+            ext.mgc_dim = 50
         }
-        ext.nb_proc = nb_proc
+        else if (stream.kind == "lf0")
+        {
+            ext.reference_dir["lf0"] = "../extraction/build/lf0"
+            ext.synthesize_dir["lf0"] = "../synthesis/build/output/imposed_dur"
+        }
+        else if (stream.kind == "ema")
+        {
+            ext.reference_dir["ema"] = "../extraction/build/ema"
+            ext.synthesize_dir["ema"] = "../synthesis/build/output/imposed_dur"
 
-        ext.list_basenames = new File(DataFileFinder.getFilePath("list_test")) as String[]
-
-        // Now let's proceed per stream
-        ext.channel_labels = ["T3", "T2", "T1", "ref", "jaw", "upperlip", "lowerlip"]
-        ext.channels = [0, 8, 16, 24, 32, 40, 48]
-        ext.reference_dir = ["dur": DataFileFinder.getFilePath(config.data.full_lab_dir)]
-        ext.synthesize_dir = ["dur": "../synthesis/build/output/normal"]
-
-        config.models.cmp.streams.each { stream ->
-            if (stream.kind == "mgc")
+            if (stream.containsKey("parameters") &&
+                stream.parameters.containsKey("channel_labels"))
             {
-                ext.reference_dir["mgc"] = "../extraction/build/mgc"
-                ext.synthesize_dir["mgc"] = "../synthesis/build/output/imposed_dur"
-                ext.mgc_dim = 50
-            }
-            else if (stream.kind == "lf0")
-            {
-                ext.reference_dir["lf0"] = "../extraction/build/lf0"
-                ext.synthesize_dir["lf0"] = "../synthesis/build/output/imposed_dur"
-            }
-            else if (stream.kind == "ema")
-            {
-                ext.reference_dir["ema"] = "../extraction/build/ema"
-                ext.synthesize_dir["ema"] = "../synthesis/build/output/imposed_dur"
-
-                if (stream.containsKey("parameters") &&
-                    stream.parameters.containsKey("channel_labels"))
-                {
-                    ext.channel_labels = stream.parameters.channel_labels
-                    ext.channels = stream.parameters.channels
-                }
-            }
-            else if (stream.kind == "weight")
-            {
-                ext.reference_dir["ema"] = "../extraction/build/ema"
-                ext.synthesize_dir["ema"] = "../synthesis/build/output/imposed_dur"
-
-
-                ext.reference_dir["weight"] = "../extraction/build/weight"
-                ext.synthesize_dir["weight"] = "../synthesis/build/output/imposed_dur"
-
-                ext.weight_dim = stream.order + 1
-
-                if (stream.containsKey("parameters") &&
-                    stream.parameters.containsKey("channel_labels"))
-                {
-                    ext.channel_labels = stream.parameters.channel_labels
-                    ext.channels = stream.parameters.channels
-                }
+                ext.channel_labels = stream.parameters.channel_labels
+                ext.channels = stream.parameters.channels
             }
         }
+        else if (stream.kind == "weight")
+        {
+            ext.reference_dir["ema"] = "../extraction/build/ema"
+            ext.synthesize_dir["ema"] = "../synthesis/build/output/imposed_dur"
 
-        ext.id_expe = eval_name
+
+            ext.reference_dir["weight"] = "../extraction/build/weight"
+            ext.synthesize_dir["weight"] = "../synthesis/build/output/imposed_dur"
+
+            ext.weight_dim = stream.order + 1
+
+            if (stream.containsKey("parameters") &&
+                stream.parameters.containsKey("channel_labels"))
+            {
+                ext.channel_labels = stream.parameters.channel_labels
+                ext.channels = stream.parameters.channels
+            }
+        }
+    }
+
+    ext.id_expe = eval_name
 }
 
 apply plugin: "de.dfki.mary.ttsanalysis"
@@ -199,27 +216,27 @@ group "org.m2ci.msp"
 version '0.1'
 
 distributions {
-  main {
-    contents {
-        from generateGlobalReport
-        from "$buildDir/output"
+    main {
+        contents {
+            from generateGlobalReport
+            from "$buildDir/output"
+        }
     }
-  }
 }
 
 publishing {
-  publications {
-    main(MavenPublication) {
-      artifact distZip
+    publications {
+        main(MavenPublication) {
+            artifact distZip
+        }
     }
-  }
-  repositories {
-    maven {
-      url "http://cloudark:8081/artifactory/data-release-local/"
-      credentials {
-        username = findProperty('cloudarkUser')
-        password = findProperty('cloudarkApiKey')
-      }
+    repositories {
+        maven {
+            url "http://cloudark:8081/artifactory/data-release-local/"
+            credentials {
+                username = findProperty('cloudarkUser')
+                password = findProperty('cloudarkApiKey')
+            }
+        }
     }
-  }
 }
