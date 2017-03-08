@@ -30,7 +30,7 @@
         "cmp": {
             "streams": [
                 {
-                    "coeffDir": "weights",
+                    "coeffDir": "weight",
                     "winfiles": [
                         "win/mgc.win1",
                         "win/mgc.win2",
