@@ -22,7 +22,7 @@ ext {
 
     // FIXME: hardcoded part
     labelsName = "mngu0_labels"
-    dataVersion = '0.1'
+    dataVersion = '0.2-SNAPSHOT'
 }
 
 configurations {
@@ -213,7 +213,7 @@ task generateGlobalReport() {
  ***************************************************************************************************/
 
 group "org.m2ci.msp"
-version '0.1'
+version '0.2-SNAPSHOT'
 
 distributions {
     main {
@@ -232,7 +232,7 @@ publishing {
     }
     repositories {
         maven {
-            url "http://cloudark:8081/artifactory/data-release-local/"
+            url "http://cloudark:8081/artifactory/data-snapshot-local/"
             credentials {
                 username = findProperty('cloudarkUser')
                 password = findProperty('cloudarkApiKey')
