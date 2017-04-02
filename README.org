@@ -1,0 +1,26 @@
+#+TITLE: Grade HTS training
+#+AUTHOR: Sébastien Le Maguer
+#+EMAIL: slemaguer@coli.uni-saarland.de
+#+DATE:  2 April 2017
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  fr
+#+OPTIONS:   H:1 num:t toc:nil  \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+#+SETUPFILE: ~/environment/src/non-install-utils/org-html-themes/setup/theme-readtheorg.setup
+* Global philosophy
+The idea is to provide tools and the accurate process to train a statistical voice based on the HTS
+framework.
+* Architecture
+* Process
+If you want to run the full process, the only thing you have to do is running this loop after
+setting the CONFIGURATION variable:
+#+begin_src sh
+  CONFIGURATION=<the basename>
+  for i in `ls -d [0-9]*`
+  do
+      (cd $i; ./gradlew -Deval_name=$CONFIGURATION publish)
+  done
+#+end_src
+* COMMENT some extra configuration
