@@ -1,0 +1,323 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        jcenter()
+        maven {
+            url 'https://oss.jfrog.org/artifactory/repo'
+        }
+        maven {
+            url "http://dl.bintray.com/slemaguer/maven"
+        }
+    }
+
+    dependencies {
+        classpath group: "de.dfki.mary", name: "marytts-hts", version: "0.2-alpha"
+    }
+
+}
+
+plugins {
+    id 'java'
+    id 'groovy'
+}
+
+def maryttsVersion = '6.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+        url 'https://oss.jfrog.org/artifactory/repo'
+    }
+    maven {
+        url "http://dl.bintray.com/slemaguer/maven"
+    }
+}
+
+dependencies {
+    compile localGroovy()
+}
+
+def sampa2arpabet = new Hashtable<String, String>();
+
+// Vowels
+sampa2arpabet.put("A", "aa");
+sampa2arpabet.put("AI", "ay");
+sampa2arpabet.put("E", "eh");
+sampa2arpabet.put("EI", "ey");
+sampa2arpabet.put("I", "ih");
+sampa2arpabet.put("O", "ao");
+sampa2arpabet.put("OI", "oy");
+sampa2arpabet.put("U", "uh");
+sampa2arpabet.put("aU", "aw");
+sampa2arpabet.put("i", "iy");
+sampa2arpabet.put("u", "uw");
+sampa2arpabet.put("@", "ax");
+sampa2arpabet.put("@U", "ow");
+sampa2arpabet.put("V", "ah");
+sampa2arpabet.put("{", "ae");
+
+sampa2arpabet.put("j", "y");
+
+sampa2arpabet.put("D", "dh");
+sampa2arpabet.put("N", "ng");
+sampa2arpabet.put("S", "sh");
+sampa2arpabet.put("T", "th");
+sampa2arpabet.put("Z", "zh");
+sampa2arpabet.put("b", "b");
+sampa2arpabet.put("d", "d");
+sampa2arpabet.put("dZ", "jh"); // FIXME: what it is ?
+sampa2arpabet.put("f", "f");
+sampa2arpabet.put("g", "g");
+sampa2arpabet.put("h", "hh");
+sampa2arpabet.put("k", "k");
+sampa2arpabet.put("l", "l");
+sampa2arpabet.put("m", "m");
+sampa2arpabet.put("n", "n");
+sampa2arpabet.put("p", "p");
+sampa2arpabet.put("r", "r");
+sampa2arpabet.put("r=", "r"); // FIXME: sure ?
+sampa2arpabet.put("s", "s");
+sampa2arpabet.put("t", "t");
+sampa2arpabet.put("tS", "ch");
+sampa2arpabet.put("v", "v");
+sampa2arpabet.put("w", "w");
+sampa2arpabet.put("z", "z");
+
+sampa2arpabet.put("_", "pau");
+
+sampa2arpabet.put("4", "dx"); // FIXME: ?
+sampa2arpabet.put("?", "q"); // FIXME: ?
+
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+
+/* Marytts needed packages */
+import marytts.LocalMaryInterface;
+import marytts.MaryInterface;
+import marytts.datatypes.MaryData;
+import marytts.datatypes.MaryDataType;
+import marytts.modules.MaryModule;
+import marytts.util.MaryUtils;
+
+import groovy.json.* // To load the JSON configuration file
+import java.util.*
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+
+
+// Load interface
+String configuration
+
+task initConfiguration() {
+    def slurper = new JsonSlurper()
+    def config_file =  new File(System.getProperty("configuration"))
+    def config = slurper.parseText( config_file.text )
+    project.ext.set("user_configuration", config)
+}
+
+
+/***************************************************************************************************
+ ***
+ ***************************************************************************************************/
+(new File(DataFileFinder.getFilePath(project.user_configuration.data.list_files))).eachLine{ filename ->
+    def rootProjectDir = "$projectDir"
+    def segment_path = DataFileFinder.getFilePath(project.user_configuration.data.alignment_dir)
+    def text_path = DataFileFinder.getFilePath(project.user_configuration.data.text_dir)
+    project(":tmp/$filename") {
+        (new File("$buildDir")).mkdirs()
+
+        task computeDescriptiveFeatures(dependsOn:initConfiguration) {
+            def input_file  = "$text_path/${filename}.txt"
+            def output_file = "$buildDir/${filename}.desc"
+
+            inputs.files input_file
+            outputs.files output_file
+
+            doLast {
+            }
+        }
+
+        task getSegmentBoundaries(dependsOn:initConfiguration) {
+            def input_file = "$segment_path/${filename}.lab"
+            def output_file = "$buildDir/${filename}.seg"
+
+            inputs.files input_file
+            outputs.files output_file
+
+            doLast {
+                def previous = 0
+                def header_over = false
+
+                //
+                def lines = (new File(input_file)).readLines()
+
+                def seg_file = new File(output_file)
+                seg_file.text = ""
+
+                // TODO: be more general as only ehmm file are taken into account
+                for (def i=0; i<lines.size(); i++) {
+                    def cur_line = lines[i]
+                    cur_line = cur_line.trim()
+                    if (cur_line.startsWith("#")){
+                        header_over = true
+                    }
+                    else if (header_over) {
+                        def list_item = cur_line.split()
+                        if (i < (lines.size() - 1)) {
+                            def list_item2 = lines[i+1].trim().split()
+
+                            // Shift if duplicate pause !
+                            if ((list_item2[2] == list_item[2]) &&
+                                (sampa2arpabet[list_item[2]] == "pau")) {
+                                continue
+                            }
+
+                        }
+
+                        seg_file.append(previous + "\t" +
+                                        Math.round(list_item[0].toFloat()* 10000000) + "\t" +
+                                        sampa2arpabet.get(list_item[2]) + System.getProperty("line.separator"))
+                        previous = Math.round(list_item[0].toFloat()* 10000000)
+                    }
+                }
+
+                // // FIXME: example for htk
+                // (new File(input_file)).eachLine { cur_line ->
+                //     cur_line = cur_line.trim()
+                //     def list_item = cur_line.split()
+                //     seg_file.append(list_item[0] + "\t" + list_item[1] +  "\t" +
+                //                     list_item[2] + System.lineSeparator)
+                // }
+            }
+        }
+
+        task generateLabels(dependsOn:[computeDescriptiveFeatures, getSegmentBoundaries]) {
+            def seg_file = new File("$buildDir/${filename}.seg")
+            def desc_file = new File("$buildDir/${filename}.desc")
+
+            def mono_lab_file = new File("$buildDir/${filename}_mono.lab")
+            def full_lab_file = new File("$buildDir/${filename}_full.lab")
+
+            inputs.files seg_file, desc_file
+            outputs.files mono_lab_file, full_lab_file
+
+            doLast {
+                def segments = seg_file.readLines()
+                def desc = desc_file.readLines()
+                def pattern_pause = ""
+                def ignore = false
+
+                // Need an alignment
+                def segs_bef_align = []
+                for (def i=0; i<segments.size; i++)
+                {
+                    def segment_infos = segments[i].split()
+                    def lab = segment_infos[2]
+                    if (lab != "pau") {
+                        // FIXME: by default sampa as an input alphabet
+                        segs_bef_align.add(lab)
+                    }
+                }
+
+
+                def desc_bef_align = []
+                for (def i=0; i<desc.size; i++)
+                {
+                    def m = desc[i] =~ /.*-(\w*)\+.*/
+                    m.matches()
+                    def lab = m.group(1)
+                    if (lab != "pau") {
+                        desc_bef_align.add(desc[i])
+                    } else {
+                        pattern_pause = desc[i]
+                    }
+
+                }
+
+                // FIXME: find a way to do exceptions
+                if (desc_bef_align.size != segs_bef_align.size) {
+                    ignore = true
+                    println("do not know how to deal with missing phones/phonemes (${desc_bef_align.size} != ${segs_bef_align.size})")
+                }
+
+                if (!ignore) {
+                    // Reinit in case of
+                    mono_lab_file.text = ""
+                    full_lab_file.text = ""
+
+                    // Merging (FIXME: hard coded format + empty symbols)
+                    def format = "%s^%s-%s+%s=%s"
+                    def infos = ["x", "x", "x", segments[0].split()[2], segments[1].split()[2]]
+                    pattern_pause = pattern_pause.replaceFirst(/[^@]*@/, "@")
+                    def offset = 0
+                    for (def i=0; i<segments.size; i++)
+                    {
+                        infos.remove(0)
+                        if (i+2 < segments.size)  {
+                            infos.add(segments[i+2].split()[2])
+                        } else {
+                            infos.add("x")
+                        }
+
+                        def segment_infos = segments[i].split()
+
+
+                        if (segment_infos[2] == "pau") {
+                            def val = String.format(format, infos as String[]) + pattern_pause
+                            full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
+                            offset += 1
+                        } else {
+                            def val = String.format(format, infos as String[]) + desc_bef_align[i-offset].replaceFirst(/[^@]*@/, "@")
+                            full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
+                        }
+
+                        mono_lab_file.append(segment_infos.join("\t") +  System.lineSeparator)
+                    }
+                }
+            }
+        }
+    }
+}
+
+task run(dependsOn:initConfiguration) {
+
+    (new File(project.user_configuration.data.list_files)).eachLine{ basename ->
+        dependsOn.add(":tmp/$basename:generateLabels")
+    }
+
+    doLast {
+
+        // Don't forget to copy the cmp
+        (new File("$buildDir/mono")).mkdirs()
+        (new File("$buildDir/full")).mkdirs()
+        (new File(project.user_configuration.data.list_files)).eachLine{ basename ->
+            def inputDir = project(":tmp/$basename").buildDir.toString()
+
+            copy {
+                from inputDir
+                into "$buildDir/mono"
+
+                include basename + "_mono.lab"
+                rename {String filename -> filename.replace("_mono", "")}
+            }
+
+            copy {
+                from inputDir
+                into "$buildDir/full"
+
+                include basename + "_full.lab"
+                rename {String filename -> filename.replace("_full", "")}
+            }
+
+        }
+    }
+}
+
+
+tasks.build.dependsOn "run"

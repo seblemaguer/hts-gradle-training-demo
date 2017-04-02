@@ -1,0 +1,30 @@
+apply plugin: 'groovy'
+apply plugin: 'java'
+
+task wrapper(type: Wrapper) {
+        gradleVersion '2.2'
+}
+
+repositories {
+        mavenLocal()
+        
+        mavenCentral()
+}
+
+dependencies {
+        compile "com.googlecode.json-simple:json-simple:1.1"
+        compile group: 'com.googlecode.efficient-java-matrix-library', name: 'core', version: '0.26'
+
+}
+
+buildscript {
+        dependencies {
+                classpath localGroovy() // classpath in buildscript, compile instead
+        }
+}
+
+// allprojects {
+//     tasks.withType(JavaCompile) {
+//         options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
+//     }
+// }
