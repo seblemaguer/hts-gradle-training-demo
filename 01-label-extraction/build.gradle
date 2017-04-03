@@ -173,165 +173,155 @@ modules=marytts.language.en.Preprocess \
                 def http = new HTTPBuilder('http://localhost:59125/')
                 http.request( POST, JSON ) {
                     uri.path = '/process'
-                    uri.query = [input: 'hello, how is it going', configuration:configuration] // will be url-encoded
+                    uri.query = [input: input_file.text, configuration:configuration] // will be url-encoded
 
                     response.success = { resp, json ->
                         output_file.text = json["result"]
                     }
                 }
-                // def postBody =
+            }
+        }
 
-                // http.post( path: '/process', body: postBody, requestContentType: URLENC ) { resp ->
-                //     println "POST Success: ${resp.statusLine}"
-                //     assert resp.statusLine.statusCode == 200
+        task getSegmentBoundaries() {
 
+            def input_file = "$segment_path/${filename}.lab"
+            def output_file = "$buildDir/${filename}.seg"
 
-                //     response.success = { resp, json ->
-                //     }
+            inputs.files input_file
+            outputs.files output_file
+
+            doLast {
+                def previous = 0
+                def header_over = false
+
+                // Loading the alignment
+                def lines = (new File(input_file)).readLines()
+
+                def seg_file = new File(output_file)
+                seg_file.text = ""
+
+                // TODO: be more general as only ehmm file are taken into account
+                for (def i=0; i<lines.size(); i++) {
+                    def cur_line = lines[i]
+                    cur_line = cur_line.trim()
+                    if (cur_line.startsWith("#")){
+                        header_over = true
+                    }
+                    else if (header_over) {
+                        def list_item = cur_line.split()
+                        if (i < (lines.size() - 1)) {
+                            def list_item2 = lines[i+1].trim().split()
+
+                            // Shift if duplicate pause !
+                            if ((list_item2[2] == list_item[2]) &&
+                                (sampa2arpabet[list_item[2]] == "pau")) {
+                                continue
+                            }
+
+                        }
+
+                        seg_file.append(previous + "\t" +
+                                        Math.round(list_item[0].toFloat()* 10000000) + "\t" +
+                                        sampa2arpabet.get(list_item[2]) + System.getProperty("line.separator"))
+                        previous = Math.round(list_item[0].toFloat()* 10000000)
+                    }
+                }
+
+                // // FIXME: example for htk
+                // (new File(input_file)).eachLine { cur_line ->
+                //     cur_line = cur_line.trim()
+                //     def list_item = cur_line.split()
+                //     seg_file.append(list_item[0] + "\t" + list_item[1] +  "\t" +
+                //                     list_item[2] + System.lineSeparator)
                 // }
             }
         }
 
-        // task getSegmentBoundaries() {
+        task generateLabels() {
+            dependsOn computeDescriptiveFeatures, getSegmentBoundaries
+            def seg_file = new File("$buildDir/${filename}.seg")
+            def desc_file = new File("$buildDir/${filename}.desc")
 
-        //     def input_file = "$segment_path/${filename}.lab"
-        //     def output_file = "$buildDir/${filename}.seg"
+            def mono_lab_file = new File("$buildDir/${filename}_mono.lab")
+            def full_lab_file = new File("$buildDir/${filename}_full.lab")
 
-        //     inputs.files input_file
-        //     outputs.files output_file
+            inputs.files seg_file, desc_file
+            outputs.files mono_lab_file, full_lab_file
 
-        //     doLast {
-        //         def previous = 0
-        //         def header_over = false
+            doLast {
+                def segments = seg_file.readLines()
+                def desc = desc_file.readLines()
+                def pattern_pause = ""
+                def ignore = false
 
-        //         // Loading the alignment
-        //         def lines = (new File(input_file)).readLines()
-
-        //         def seg_file = new File(output_file)
-        //         seg_file.text = ""
-
-        //         // TODO: be more general as only ehmm file are taken into account
-        //         for (def i=0; i<lines.size(); i++) {
-        //             def cur_line = lines[i]
-        //             cur_line = cur_line.trim()
-        //             if (cur_line.startsWith("#")){
-        //                 header_over = true
-        //             }
-        //             else if (header_over) {
-        //                 def list_item = cur_line.split()
-        //                 if (i < (lines.size() - 1)) {
-        //                     def list_item2 = lines[i+1].trim().split()
-
-        //                     // Shift if duplicate pause !
-        //                     if ((list_item2[2] == list_item[2]) &&
-        //                         (sampa2arpabet[list_item[2]] == "pau")) {
-        //                         continue
-        //                     }
-
-        //                 }
-
-        //                 seg_file.append(previous + "\t" +
-        //                                 Math.round(list_item[0].toFloat()* 10000000) + "\t" +
-        //                                 sampa2arpabet.get(list_item[2]) + System.getProperty("line.separator"))
-        //                 previous = Math.round(list_item[0].toFloat()* 10000000)
-        //             }
-        //         }
-
-        //         // // FIXME: example for htk
-        //         // (new File(input_file)).eachLine { cur_line ->
-        //         //     cur_line = cur_line.trim()
-        //         //     def list_item = cur_line.split()
-        //         //     seg_file.append(list_item[0] + "\t" + list_item[1] +  "\t" +
-        //         //                     list_item[2] + System.lineSeparator)
-        //         // }
-        //     }
-        // }
-
-        // task generateLabels() {
-        //     dependsOn computeDescriptiveFeatures, getSegmentBoundaries
-        //     def seg_file = new File("$buildDir/${filename}.seg")
-        //     def desc_file = new File("$buildDir/${filename}.desc")
-
-        //     def mono_lab_file = new File("$buildDir/${filename}_mono.lab")
-        //     def full_lab_file = new File("$buildDir/${filename}_full.lab")
-
-        //     inputs.files seg_file, desc_file
-        //     outputs.files mono_lab_file, full_lab_file
-
-        //     doLast {
-        //         def segments = seg_file.readLines()
-        //         def desc = desc_file.readLines()
-        //         def pattern_pause = ""
-        //         def ignore = false
-
-        //         // Need an alignment
-        //         def segs_bef_align = []
-        //         for (def i=0; i<segments.size; i++)
-        //         {
-        //             def segment_infos = segments[i].split()
-        //             def lab = segment_infos[2]
-        //             if (lab != "pau") {
-        //                 segs_bef_align.add(lab) // FIXME: by default sampa as an input alphabet
-        //             }
-        //         }
+                // Need an alignment
+                def segs_bef_align = []
+                for (def i=0; i<segments.size; i++)
+                {
+                    def segment_infos = segments[i].split()
+                    def lab = segment_infos[2]
+                    if (lab != "pau") {
+                        segs_bef_align.add(lab) // FIXME: by default sampa as an input alphabet
+                    }
+                }
 
 
-        //         def desc_bef_align = []
-        //         for (def i=0; i<desc.size; i++)
-        //         {
-        //             def m = desc[i] =~ /.*-(\w*)\+.*/
-        //             m.matches()
-        //             def lab = m.group(1)
-        //             if (lab != "pau") {
-        //                 desc_bef_align.add(desc[i])
-        //             } else {
-        //                 pattern_pause = desc[i]
-        //             }
+                def desc_bef_align = []
+                for (def i=0; i<desc.size; i++)
+                {
+                    def m = desc[i] =~ /.*-(\w*)\+.*/
+                    m.matches()
+                    def lab = m.group(1)
+                    if (lab != "pau") {
+                        desc_bef_align.add(desc[i])
+                    } else {
+                        pattern_pause = desc[i]
+                    }
 
-        //         }
+                }
 
-        //         // FIXME: find a way to do exceptions
-        //         if (desc_bef_align.size != segs_bef_align.size) {
-        //             ignore = true
-        //             println("do not know how to deal with missing phones/phonemes (${desc_bef_align.size} != ${segs_bef_align.size})")
-        //         }
+                // FIXME: find a way to do exceptions
+                if (desc_bef_align.size != segs_bef_align.size) {
+                    ignore = true
+                    println("do not know how to deal with missing phones/phonemes (${desc_bef_align.size} != ${segs_bef_align.size})")
+                }
 
-        //         if (!ignore) {
-        //             // Reinit in case of
-        //             mono_lab_file.text = ""
-        //             full_lab_file.text = ""
+                if (!ignore) {
+                    // Reinit in case of
+                    mono_lab_file.text = ""
+                    full_lab_file.text = ""
 
-        //             // Merging (FIXME: hard coded format + empty symbols)
-        //             def format = "%s^%s-%s+%s=%s"
-        //             def infos = ["x", "x", "x", segments[0].split()[2], segments[1].split()[2]]
-        //             pattern_pause = pattern_pause.replaceFirst(/[^@]*@/, "@")
-        //             def offset = 0
-        //             for (def i=0; i<segments.size; i++)
-        //             {
-        //                 infos.remove(0)
-        //                 if (i+2 < segments.size)  {
-        //                     infos.add(segments[i+2].split()[2])
-        //                 } else {
-        //                     infos.add("x")
-        //                 }
+                    // Merging (FIXME: hard coded format + empty symbols)
+                    def format = "%s^%s-%s+%s=%s"
+                    def infos = ["x", "x", "x", segments[0].split()[2], segments[1].split()[2]]
+                    pattern_pause = pattern_pause.replaceFirst(/[^@]*@/, "@")
+                    def offset = 0
+                    for (def i=0; i<segments.size; i++)
+                    {
+                        infos.remove(0)
+                        if (i+2 < segments.size)  {
+                            infos.add(segments[i+2].split()[2])
+                        } else {
+                            infos.add("x")
+                        }
 
-        //                 def segment_infos = segments[i].split()
+                        def segment_infos = segments[i].split()
 
 
-        //                 if (segment_infos[2] == "pau") {
-        //                     def val = String.format(format, infos as String[]) + pattern_pause
-        //                     full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
-        //                     offset += 1
-        //                 } else {
-        //                     def val = String.format(format, infos as String[]) + desc_bef_align[i-offset].replaceFirst(/[^@]*@/, "@")
-        //                     full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
-        //                 }
+                        if (segment_infos[2] == "pau") {
+                            def val = String.format(format, infos as String[]) + pattern_pause
+                            full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
+                            offset += 1
+                        } else {
+                            def val = String.format(format, infos as String[]) + desc_bef_align[i-offset].replaceFirst(/[^@]*@/, "@")
+                            full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
+                        }
 
-        //                 mono_lab_file.append(segment_infos.join("\t") +  System.lineSeparator)
-        //             }
-        //         }
-        //     }
-        // }
+                        mono_lab_file.append(segment_infos.join("\t") +  System.lineSeparator)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -339,8 +329,7 @@ task run() {
 
 
     (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
-        // dependsOn.add(":tmp/$basename:generateLabels")
-        dependsOn ":tmp/$basename:computeDescriptiveFeatures"
+        dependsOn.add(":tmp/$basename:generateLabels")
     }
 
 
@@ -355,7 +344,8 @@ task run() {
         (new File("$buildDir/mono")).mkdirs()
         (new File("$buildDir/full")).mkdirs()
 
-        (new File(project.user_configuration.data.list_files)).eachLine{ basename ->
+
+        (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
             def inputDir = project(":tmp/$basename").buildDir.toString()
 
             // Copy the mono label file
