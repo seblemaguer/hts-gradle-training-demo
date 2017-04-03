@@ -1,5 +1,5 @@
 def eval_name = System.getProperty("eval_name")
-rootProject.name = eval_name
+rootProject.name = eval_name + "-acoustic_parameters"
 
 import groovy.json.* // To load the JSON configuration file
 import java.util.*

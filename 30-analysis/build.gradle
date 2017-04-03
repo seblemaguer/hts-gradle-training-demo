@@ -33,7 +33,7 @@ configurations {
 
 dependencies {
     // labels group: 'org.m2ci.msp', name: labelsName, version: dataVersion, ext: 'zip'
-    acoustic group: 'org.m2ci.msp', name: System.getProperty("eval_name"), version: '0.1-SNAPSHOT', ext:'zip'
+    acoustic group: 'org.m2ci.msp', name: System.getProperty("eval_name") + "-acoustic_parameters", version: '0.1-SNAPSHOT', ext:'zip'
     ema group: 'org.m2ci.msp', name: "mngu0_ema_tongue", version: '0.1-SNAPSHOT', ext:'zip'
 }
 
