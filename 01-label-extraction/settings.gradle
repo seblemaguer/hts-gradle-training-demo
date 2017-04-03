@@ -1,20 +1,23 @@
+def eval_name = System.getProperty("eval_name")
+rootProject.name = eval_name + "-labels"
+
 import groovy.json.* // To load the JSON configuration file
 import java.util.*
 
+
 def slurper = new JsonSlurper()
-def config_file =  new File(System.getProperty("configuration"))
+def config_file =  new File("../src/configuration/${eval_name}.json")
 def config = slurper.parseText( config_file.text )
 
 
+// FIXME
 // Adapt pathes
-DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
+def project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
 if (config.data.project_dir) {
-    DataFileFinder.project_path = config.data.project_dir
+    project_path = config.data.project_dir
 }
 
-
-
-(new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
+(new File(project_path + "/" + config.data.list_files)).eachLine{ basename ->
     (new File("tmp/$basename")).mkdirs()
     include "tmp/$basename"
 }

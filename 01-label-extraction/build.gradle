@@ -11,7 +11,7 @@ buildscript {
     }
 
     dependencies {
-        classpath group: "de.dfki.mary", name: "marytts-hts", version: "0.2-alpha"
+        classpath group: "org.codehaus.groovy.modules.http-builder", name: "http-builder", version: "0.7"
     }
 
 }
@@ -93,13 +93,10 @@ sampa2arpabet.put("?", "q"); // FIXME: ?
  ***
  ***************************************************************************************************/
 
-/* Marytts needed packages */
-import marytts.LocalMaryInterface;
-import marytts.MaryInterface;
-import marytts.datatypes.MaryData;
-import marytts.datatypes.MaryDataType;
-import marytts.modules.MaryModule;
-import marytts.util.MaryUtils;
+import groovyx.net.http.HTTPBuilder
+import static groovyx.net.http.ContentType.URLENC
+import static groovyx.net.http.Method.POST
+import static groovyx.net.http.ContentType.JSON
 
 import groovy.json.* // To load the JSON configuration file
 import java.util.*
@@ -110,15 +107,22 @@ import java.util.regex.Pattern
  ***
  ***************************************************************************************************/
 
+ext {
+    config_file = new File("../src/configuration/" + System.getProperty("eval_name") + ".json")
+}
 
-// Load interface
-String configuration
+def slurper = new JsonSlurper()
+def config = slurper.parseText( config_file.text )
+project.ext.set("user_configuration", config)
 
-task initConfiguration() {
-    def slurper = new JsonSlurper()
-    def config_file =  new File(System.getProperty("configuration"))
-    def config = slurper.parseText( config_file.text )
-    project.ext.set("user_configuration", config)
+/***
+ *** FIXME: should not be here technically !
+ ***/
+
+// Adapt pathes
+DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
+if (config.data.project_dir) {
+    DataFileFinder.project_path = config.data.project_dir
 }
 
 
@@ -129,176 +133,232 @@ task initConfiguration() {
     def rootProjectDir = "$projectDir"
     def segment_path = DataFileFinder.getFilePath(project.user_configuration.data.alignment_dir)
     def text_path = DataFileFinder.getFilePath(project.user_configuration.data.text_dir)
+
     project(":tmp/$filename") {
         (new File("$buildDir")).mkdirs()
 
-        task computeDescriptiveFeatures(dependsOn:initConfiguration) {
-            def input_file  = "$text_path/${filename}.txt"
-            def output_file = "$buildDir/${filename}.desc"
+        task computeDescriptiveFeatures() {
+
+            def input_file  = new File("$text_path/${filename}.txt")
+            def output_file = new File("$buildDir/${filename}.desc")
 
             inputs.files input_file
             outputs.files output_file
 
             doLast {
-            }
-        }
 
-        task getSegmentBoundaries(dependsOn:initConfiguration) {
-            def input_file = "$segment_path/${filename}.lab"
-            def output_file = "$buildDir/${filename}.seg"
+                def configuration = """
+# How to extract the input
+input_serializer=marytts.io.TextSerializer
 
-            inputs.files input_file
-            outputs.files output_file
+# How to render the output
+output_serializer=marytts.io.HTSLabelSerializer
+# output_serializer=marytts.io.XMLSerializer
+# output_serializer=marytts.io.ROOTSJSONSerializer
 
-            doLast {
-                def previous = 0
-                def header_over = false
+# Current locale
+locale=en_US
 
-                //
-                def lines = (new File(input_file)).readLines()
+# List of modules
+modules=marytts.language.en.Preprocess \
+        marytts.language.en.JTokenizer       \
+        marytts.modules.nlp.OpenNLPPosTagger \
+        marytts.modules.nlp.JPhonemiser      \
+        marytts.language.en.Prosody            \
+        marytts.modules.nlp.PronunciationModel          \
+        marytts.modules.acoustic.TargetFeatureLister
+"""
 
-                def seg_file = new File(output_file)
-                seg_file.text = ""
 
-                // TODO: be more general as only ehmm file are taken into account
-                for (def i=0; i<lines.size(); i++) {
-                    def cur_line = lines[i]
-                    cur_line = cur_line.trim()
-                    if (cur_line.startsWith("#")){
-                        header_over = true
-                    }
-                    else if (header_over) {
-                        def list_item = cur_line.split()
-                        if (i < (lines.size() - 1)) {
-                            def list_item2 = lines[i+1].trim().split()
+                def http = new HTTPBuilder('http://localhost:59125/')
+                http.request( POST, JSON ) {
+                    uri.path = '/process'
+                    uri.query = [input: 'hello, how is it going', configuration:configuration] // will be url-encoded
 
-                            // Shift if duplicate pause !
-                            if ((list_item2[2] == list_item[2]) &&
-                                (sampa2arpabet[list_item[2]] == "pau")) {
-                                continue
-                            }
-
-                        }
-
-                        seg_file.append(previous + "\t" +
-                                        Math.round(list_item[0].toFloat()* 10000000) + "\t" +
-                                        sampa2arpabet.get(list_item[2]) + System.getProperty("line.separator"))
-                        previous = Math.round(list_item[0].toFloat()* 10000000)
+                    response.success = { resp, json ->
+                        output_file.text = json["result"]
                     }
                 }
+                // def postBody =
 
-                // // FIXME: example for htk
-                // (new File(input_file)).eachLine { cur_line ->
-                //     cur_line = cur_line.trim()
-                //     def list_item = cur_line.split()
-                //     seg_file.append(list_item[0] + "\t" + list_item[1] +  "\t" +
-                //                     list_item[2] + System.lineSeparator)
+                // http.post( path: '/process', body: postBody, requestContentType: URLENC ) { resp ->
+                //     println "POST Success: ${resp.statusLine}"
+                //     assert resp.statusLine.statusCode == 200
+
+
+                //     response.success = { resp, json ->
+                //     }
                 // }
             }
         }
 
-        task generateLabels(dependsOn:[computeDescriptiveFeatures, getSegmentBoundaries]) {
-            def seg_file = new File("$buildDir/${filename}.seg")
-            def desc_file = new File("$buildDir/${filename}.desc")
+        // task getSegmentBoundaries() {
 
-            def mono_lab_file = new File("$buildDir/${filename}_mono.lab")
-            def full_lab_file = new File("$buildDir/${filename}_full.lab")
+        //     def input_file = "$segment_path/${filename}.lab"
+        //     def output_file = "$buildDir/${filename}.seg"
 
-            inputs.files seg_file, desc_file
-            outputs.files mono_lab_file, full_lab_file
+        //     inputs.files input_file
+        //     outputs.files output_file
 
-            doLast {
-                def segments = seg_file.readLines()
-                def desc = desc_file.readLines()
-                def pattern_pause = ""
-                def ignore = false
+        //     doLast {
+        //         def previous = 0
+        //         def header_over = false
 
-                // Need an alignment
-                def segs_bef_align = []
-                for (def i=0; i<segments.size; i++)
-                {
-                    def segment_infos = segments[i].split()
-                    def lab = segment_infos[2]
-                    if (lab != "pau") {
-                        // FIXME: by default sampa as an input alphabet
-                        segs_bef_align.add(lab)
-                    }
-                }
+        //         // Loading the alignment
+        //         def lines = (new File(input_file)).readLines()
+
+        //         def seg_file = new File(output_file)
+        //         seg_file.text = ""
+
+        //         // TODO: be more general as only ehmm file are taken into account
+        //         for (def i=0; i<lines.size(); i++) {
+        //             def cur_line = lines[i]
+        //             cur_line = cur_line.trim()
+        //             if (cur_line.startsWith("#")){
+        //                 header_over = true
+        //             }
+        //             else if (header_over) {
+        //                 def list_item = cur_line.split()
+        //                 if (i < (lines.size() - 1)) {
+        //                     def list_item2 = lines[i+1].trim().split()
+
+        //                     // Shift if duplicate pause !
+        //                     if ((list_item2[2] == list_item[2]) &&
+        //                         (sampa2arpabet[list_item[2]] == "pau")) {
+        //                         continue
+        //                     }
+
+        //                 }
+
+        //                 seg_file.append(previous + "\t" +
+        //                                 Math.round(list_item[0].toFloat()* 10000000) + "\t" +
+        //                                 sampa2arpabet.get(list_item[2]) + System.getProperty("line.separator"))
+        //                 previous = Math.round(list_item[0].toFloat()* 10000000)
+        //             }
+        //         }
+
+        //         // // FIXME: example for htk
+        //         // (new File(input_file)).eachLine { cur_line ->
+        //         //     cur_line = cur_line.trim()
+        //         //     def list_item = cur_line.split()
+        //         //     seg_file.append(list_item[0] + "\t" + list_item[1] +  "\t" +
+        //         //                     list_item[2] + System.lineSeparator)
+        //         // }
+        //     }
+        // }
+
+        // task generateLabels() {
+        //     dependsOn computeDescriptiveFeatures, getSegmentBoundaries
+        //     def seg_file = new File("$buildDir/${filename}.seg")
+        //     def desc_file = new File("$buildDir/${filename}.desc")
+
+        //     def mono_lab_file = new File("$buildDir/${filename}_mono.lab")
+        //     def full_lab_file = new File("$buildDir/${filename}_full.lab")
+
+        //     inputs.files seg_file, desc_file
+        //     outputs.files mono_lab_file, full_lab_file
+
+        //     doLast {
+        //         def segments = seg_file.readLines()
+        //         def desc = desc_file.readLines()
+        //         def pattern_pause = ""
+        //         def ignore = false
+
+        //         // Need an alignment
+        //         def segs_bef_align = []
+        //         for (def i=0; i<segments.size; i++)
+        //         {
+        //             def segment_infos = segments[i].split()
+        //             def lab = segment_infos[2]
+        //             if (lab != "pau") {
+        //                 segs_bef_align.add(lab) // FIXME: by default sampa as an input alphabet
+        //             }
+        //         }
 
 
-                def desc_bef_align = []
-                for (def i=0; i<desc.size; i++)
-                {
-                    def m = desc[i] =~ /.*-(\w*)\+.*/
-                    m.matches()
-                    def lab = m.group(1)
-                    if (lab != "pau") {
-                        desc_bef_align.add(desc[i])
-                    } else {
-                        pattern_pause = desc[i]
-                    }
+        //         def desc_bef_align = []
+        //         for (def i=0; i<desc.size; i++)
+        //         {
+        //             def m = desc[i] =~ /.*-(\w*)\+.*/
+        //             m.matches()
+        //             def lab = m.group(1)
+        //             if (lab != "pau") {
+        //                 desc_bef_align.add(desc[i])
+        //             } else {
+        //                 pattern_pause = desc[i]
+        //             }
 
-                }
+        //         }
 
-                // FIXME: find a way to do exceptions
-                if (desc_bef_align.size != segs_bef_align.size) {
-                    ignore = true
-                    println("do not know how to deal with missing phones/phonemes (${desc_bef_align.size} != ${segs_bef_align.size})")
-                }
+        //         // FIXME: find a way to do exceptions
+        //         if (desc_bef_align.size != segs_bef_align.size) {
+        //             ignore = true
+        //             println("do not know how to deal with missing phones/phonemes (${desc_bef_align.size} != ${segs_bef_align.size})")
+        //         }
 
-                if (!ignore) {
-                    // Reinit in case of
-                    mono_lab_file.text = ""
-                    full_lab_file.text = ""
+        //         if (!ignore) {
+        //             // Reinit in case of
+        //             mono_lab_file.text = ""
+        //             full_lab_file.text = ""
 
-                    // Merging (FIXME: hard coded format + empty symbols)
-                    def format = "%s^%s-%s+%s=%s"
-                    def infos = ["x", "x", "x", segments[0].split()[2], segments[1].split()[2]]
-                    pattern_pause = pattern_pause.replaceFirst(/[^@]*@/, "@")
-                    def offset = 0
-                    for (def i=0; i<segments.size; i++)
-                    {
-                        infos.remove(0)
-                        if (i+2 < segments.size)  {
-                            infos.add(segments[i+2].split()[2])
-                        } else {
-                            infos.add("x")
-                        }
+        //             // Merging (FIXME: hard coded format + empty symbols)
+        //             def format = "%s^%s-%s+%s=%s"
+        //             def infos = ["x", "x", "x", segments[0].split()[2], segments[1].split()[2]]
+        //             pattern_pause = pattern_pause.replaceFirst(/[^@]*@/, "@")
+        //             def offset = 0
+        //             for (def i=0; i<segments.size; i++)
+        //             {
+        //                 infos.remove(0)
+        //                 if (i+2 < segments.size)  {
+        //                     infos.add(segments[i+2].split()[2])
+        //                 } else {
+        //                     infos.add("x")
+        //                 }
 
-                        def segment_infos = segments[i].split()
+        //                 def segment_infos = segments[i].split()
 
 
-                        if (segment_infos[2] == "pau") {
-                            def val = String.format(format, infos as String[]) + pattern_pause
-                            full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
-                            offset += 1
-                        } else {
-                            def val = String.format(format, infos as String[]) + desc_bef_align[i-offset].replaceFirst(/[^@]*@/, "@")
-                            full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
-                        }
+        //                 if (segment_infos[2] == "pau") {
+        //                     def val = String.format(format, infos as String[]) + pattern_pause
+        //                     full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
+        //                     offset += 1
+        //                 } else {
+        //                     def val = String.format(format, infos as String[]) + desc_bef_align[i-offset].replaceFirst(/[^@]*@/, "@")
+        //                     full_lab_file.append(segment_infos[0..1].join("\t") + "\t$val" + System.lineSeparator)
+        //                 }
 
-                        mono_lab_file.append(segment_infos.join("\t") +  System.lineSeparator)
-                    }
-                }
-            }
-        }
+        //                 mono_lab_file.append(segment_infos.join("\t") +  System.lineSeparator)
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 
-task run(dependsOn:initConfiguration) {
+task run() {
 
-    (new File(project.user_configuration.data.list_files)).eachLine{ basename ->
-        dependsOn.add(":tmp/$basename:generateLabels")
+
+    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
+        // dependsOn.add(":tmp/$basename:generateLabels")
+        dependsOn ":tmp/$basename:computeDescriptiveFeatures"
+    }
+
+
+    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
+        outputs.files "$buildDir/mono/${basename}.lab"
+        outputs.files "$buildDir/full/${basename}.lab"
     }
 
     doLast {
 
-        // Don't forget to copy the cmp
+        // Generate the directories
         (new File("$buildDir/mono")).mkdirs()
         (new File("$buildDir/full")).mkdirs()
+
         (new File(project.user_configuration.data.list_files)).eachLine{ basename ->
             def inputDir = project(":tmp/$basename").buildDir.toString()
 
+            // Copy the mono label file
             copy {
                 from inputDir
                 into "$buildDir/mono"
@@ -307,6 +367,8 @@ task run(dependsOn:initConfiguration) {
                 rename {String filename -> filename.replace("_mono", "")}
             }
 
+
+            // Copy the full label file
             copy {
                 from inputDir
                 into "$buildDir/full"
