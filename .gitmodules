@@ -1,18 +1,3 @@
 [submodule "synthesis/utils/pyhts"]
 	path = synthesis/utils/pyhts
 	url = git@github.com:seblemaguer/pyhts.git
-[submodule "extraction/buildSrc/gradle-acoustic-parameter-extraction-plugin"]
-	path = extraction/buildSrc/gradle-acoustic-parameter-extraction-plugin
-	url = git@github.com:seblemaguer/gradle-acoustic-parameter-extraction-plugin.git
-[submodule "training/buildSrc/gradle-hts-coefficients-packing-plugin"]
-	path = training/buildSrc/gradle-hts-coefficients-packing-plugin
-	url = git@github.com:seblemaguer/gradle-hts-coefficients-packing-plugin.git
-[submodule "training/buildSrc/gradle-hts-voicebuilding-plugin"]
-	path = training/buildSrc/gradle-hts-voicebuilding-plugin
-	url = git@github.com:seblemaguer/gradle-hts-voicebuilding-plugin.git
-[submodule "analysis/buildSrc/gradle-tts-evaluation-plugin"]
-	path = analysis/buildSrc/gradle-tts-evaluation-plugin
-	url = git@github.com:seblemaguer/gradle-tts-evaluation-plugin.git
-[submodule "analysis/buildSrc/gradle-ema-evaluation-plugin"]
-	path = analysis/buildSrc/gradle-ema-evaluation-plugin
-	url = git@github.com:seblemaguer/gradle-ema-evaluation-plugin.git
