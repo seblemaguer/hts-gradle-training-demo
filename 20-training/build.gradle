@@ -1,12 +1,12 @@
+
 /***************************************************************************************
  ** Requires
  ***************************************************************************************/
 buildscript {
     repositories {
-        mavenCentral()
-        // mavenLocal()
+        jcenter()
         maven {
-            url 'https://oss.jfrog.org/artifactory/repo'
+	    url 'https://oss.jfrog.org/artifactory/oss-snapshot-local'
         }
     }
 
@@ -33,12 +33,7 @@ taskTree{
 
 
 repositories {
-    jcenter
-}
-
-configurations {
-    acoustic
-    labels
+    jcenter()
 }
 
 
@@ -48,7 +43,7 @@ dependencies {
 
 ext {
     config_file = new File("../src/configuration/" + System.getProperty("eval_name") + ".json")
-    coeff_dataset_root = "$buildDir/../../00-extraction"
+    dataset_root = "$buildDir/../../10-extraction/build/"
 }
 
 
@@ -74,47 +69,10 @@ if (config.data.project_dir) {
 }
 
 
-
 /***************************************************************************************
  ** Unpacking
  ***************************************************************************************/
-task extractDataArchive {
-    def datasetDir = file(dataset_root)
-    if (System.getProperty("skipHMMTraining"))
-    {
-        datasetDir = file(dataset_root + "dnn")
-    }
-    outputs.files datasetDir
-
-    doLast {
-        copy {
-            from configurations.acoustic.collect { zipTree(it) }
-            into datasetDir
-            eachFile {
-                def newPath = it.relativePath.segments[1..-1].join("/")
-                it.relativePath = RelativePath.parse(true, newPath)
-            }
-        }
-
-
-        copy {
-            from configurations.labels.collect { zipTree(it) }
-            into datasetDir
-            eachFile {
-                def newPath = it.relativePath.segments[1..-1].join("/")
-                it.relativePath = RelativePath.parse(true, newPath)
-            }
-        }
-    }
-}
-
-
-
-
-/***************************************************************************************
- ** Unpacking
- ***************************************************************************************/
-task configure(dependsOn: "extractDataArchive") {
+task configure() {
     /* We have also to adapt a little bit the coefficient paths */
     config.models.cmp.streams.each { stream ->
         stream.coeffDir = "$dataset_root/${stream.coeffDir}"
@@ -141,7 +99,6 @@ task configure(dependsOn: "extractDataArchive") {
 }
 
 task configurationVoiceBuilding() {
-    dependsOn "extractDataArchive"
 
     (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
         dependsOn ":${basename}:pack"
