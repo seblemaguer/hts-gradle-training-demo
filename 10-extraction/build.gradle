@@ -60,18 +60,6 @@ ext {
 def slurper = new JsonSlurper()
 def config = slurper.parseText( config_file.text )
 
-/***************************************************************************************
- ** Unpacking
- ***************************************************************************************/
-task unpackWavData() {
-    doLast {
-        copy {
-            from configurations.wav.collect { zipTree(it) }
-            into "$buildDir/wav"
-            eachFile { it.path = it.name }
-        }
-    }
-}
 
 /***************************************************************************************
  ** Standard extraction
@@ -81,7 +69,7 @@ task unpackWavData() {
         buildDir = project.parent.buildDir
         apply plugin: "de.dfki.mary.coefficientextraction"
 
-        task configuration(dependsOn: ":unpackWavData") {
+        task configuration() {
 
             DataFileFinder.project_path =
             new File(getClass().protectionDomain.codeSource.location.path).parent
@@ -104,7 +92,7 @@ task unpackWavData() {
             ext.nb_proc = nb_proc
 
 
-            ext.wav_dir = "$buildDir/wav"
+            ext.wav_dir = DataFileFinder.getFilePath(config.data.wav_dir)
 	    ext.kind = config.settings.extraction.kind
             ext.user_configuration = config
         }
