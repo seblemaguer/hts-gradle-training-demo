@@ -3,15 +3,13 @@
  ***************************************************************************************/
 buildscript {
     repositories {
-        mavenCentral()
-        // mavenLocal()
+        jcenter()
         maven {
             url 'https://oss.jfrog.org/artifactory/oss-snapshot-local'
         }
     }
 
     dependencies {
-        classpath group: "com.googlecode.json-simple", name:"json-simple", version:"1.1"
         classpath group: "de.dfki.mary", name: "gradle-coefficientextraction-plugin", version: "1.0-SNAPSHOT"
     }
 }
@@ -21,6 +19,7 @@ plugins {
     id 'maven-publish'
     id 'groovy'
 }
+apply plugin: "de.dfki.mary.coefficientextraction"
 
 
 dependencies {
@@ -45,10 +44,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
-import org.json.simple.JSONObject;
-import org.json.simple.JSONArray;
-import org.json.simple.parser.ParseException;
-import org.json.simple.parser.JSONParser;
 
 
 /***************************************************************************************
@@ -57,50 +52,39 @@ import org.json.simple.parser.JSONParser;
 ext {
     config_file = new File("../src/configuration/" + System.getProperty("eval_name") + ".json")
 }
-def slurper = new JsonSlurper()
+def slurper = new JsonSlurperClassic()
 def config = slurper.parseText( config_file.text )
 
 
 /***************************************************************************************
  ** Standard extraction
  ***************************************************************************************/
-(new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
-    project(":$basename") {
-        buildDir = project.parent.buildDir
-        apply plugin: "de.dfki.mary.coefficientextraction"
 
-        task configuration() {
+task configuration() {
 
-            DataFileFinder.project_path =
-            new File(getClass().protectionDomain.codeSource.location.path).parent
-            if (config.data.project_dir) {
-                DataFileFinder.project_path = config.data.project_dir
+    DataFileFinder.project_path =
+        new File(getClass().protectionDomain.codeSource.location.path).parent
+    if (config.data.project_dir) {
+        DataFileFinder.project_path = config.data.project_dir
+    }
+
+    // See for number of processes for parallel mode
+    def nb_proc = 1
+    if (project.gradle.startParameter.getMaxWorkerCount() != 0) {
+        nb_proc = Runtime.getRuntime().availableProcessors(); // By default the number of core
+        if (config.settings.nb_proc) {
+            if (config.settings.nb_proc > nb_proc) {
+                throw Exception("You will overload your machine, preventing stop !")
             }
 
-            // See for number of processes for parallel mode
-            def nb_proc = 1
-            if (project.gradle.startParameter.getMaxWorkerCount() != 0) {
-                nb_proc = Runtime.getRuntime().availableProcessors(); // By default the number of core
-                if (config.settings.nb_proc) {
-                    if (config.settings.nb_proc > nb_proc) {
-                        throw Exception("You will overload your machine, preventing stop !")
-                    }
-
-                    nb_proc = config.settings.nb_proc
-                }
-            }
-            ext.nb_proc = nb_proc
-
-
-            ext.wav_dir = DataFileFinder.getFilePath(config.data.wav_dir)
-	    ext.kind = config.settings.extraction.kind
-            ext.user_configuration = config
+            nb_proc = config.settings.nb_proc
         }
     }
-}
+    ext.nb_proc = nb_proc
 
-task extract() {
-    (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
-        dependsOn ":${basename}:extract"
-    }
+    ext.list_basenames = DataFileFinder.getFilePath(config.data.list_files)
+    ext.wav_dir = DataFileFinder.getFilePath(config.data.wav_dir)
+    ext.ema_dir = DataFileFinder.getFilePath(config.data.ema_dir)
+    ext.kind = config.settings.extraction.kind
+    ext.user_configuration = (Map) config
 }
