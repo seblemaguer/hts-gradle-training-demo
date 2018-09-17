@@ -83,8 +83,15 @@ task configuration() {
     ext.nb_proc = nb_proc
 
     ext.list_basenames = DataFileFinder.getFilePath(config.data.list_files)
-    ext.wav_dir = DataFileFinder.getFilePath(config.data.wav_dir)
-    ext.ema_dir = DataFileFinder.getFilePath(config.data.ema_dir)
+    if (config.data.wav_dir) {
+        ext.wav_dir = DataFileFinder.getFilePath(config.data.wav_dir)
+    }
+    if (config.data.ema_dir) {
+        ext.ema_dir = DataFileFinder.getFilePath(config.data.ema_dir)
+    }
+    if (config.data.weight_dir) {
+        ext.weight_dir = DataFileFinder.getFilePath(config.data.weight_dir)
+    }
     ext.kind = config.settings.extraction.kind
     ext.user_configuration = (Map) config
 }
