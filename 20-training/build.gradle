@@ -59,7 +59,7 @@ import java.util.*
  ** Variable / ext definition
  ***************************************************************************************/
 
-def slurper = new JsonSlurper()
+def slurper = new JsonSlurperClassic()
 def config = slurper.parseText( config_file.text )
 
 // Adapt pathes
@@ -72,7 +72,12 @@ if (config.data.project_dir) {
 /***************************************************************************************
  ** Unpacking
  ***************************************************************************************/
-task configure() {
+
+apply plugin: "de.dfki.mary.htspacking"
+// apply plugin: "de.dfki.mary.htsvoicebuilding"
+
+
+task configuration() {
     /* We have also to adapt a little bit the coefficient paths */
     config.models.cmp.streams.each { stream ->
         stream.coeffDir = "$dataset_root/${stream.coeffDir}"
@@ -83,21 +88,13 @@ task configure() {
             stream.coeffDir = "$dataset_root/${stream.coeffDir}"
         }
     }
+
+    ext.list_basenames = DataFileFinder.getFilePath(config.data.list_files)
+    ext.user_configuration = config
+    ext.config_file = config_file
 }
 
-/* Generate the training observation files */
-(new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine{ basename ->
-    project(":$basename") {
-        buildDir = project.parent.buildDir
-        apply plugin: "de.dfki.mary.htspacking"
-
-        task configurationPacking(dependsOn: ":configure") {
-            ext.user_configuration = config
-            ext.config_file = config_file
-        }
-    }
-}
-
+/*
 task configurationVoiceBuilding() {
 
     (new File(DataFileFinder.getFilePath(config.data.list_files))).eachLine { basename ->
@@ -133,15 +130,4 @@ task configurationVoiceBuilding() {
 
     ext.user_configuration = config
 }
-
-
-apply plugin: "de.dfki.mary.htsvoicebuilding"
-
-
-task finalize(dependsOn: "run") {
-}
-
-
-/***************************************************************************************************
- *** Publishing part
- ***************************************************************************************************/
+*/
