@@ -95,3 +95,6 @@ task configuration() {
     ext.kind = config.settings.extraction.kind
     ext.user_configuration = (Map) config
 }
+
+
+build.dependsOn "extract"
