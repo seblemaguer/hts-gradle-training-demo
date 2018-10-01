@@ -21,10 +21,10 @@ A special directory has been created to store the configuration files **src/conf
 # Some example parameters
 export NB_PROC=2
 export EVAL_NAME=cmu_slt_arctic_straight_dnn
-(cd extraction; ./gradlew publish --parallel --max-workers=$NB_PROC -Deval_name=$EVAL_NAME)
-(cd training; ./gradlew run --parallel --max-workers=$NB_PROC -Deval_name=$EVAL_NAME)
-(cd synthesis; ./gradlew publish --parallel --max-workers=$NB_PROC -Deval_name=$EVAL_NAME)
-(cd analysis; ./gradlew publish --parallel --max-workers=$NB_PROC -Deval_name=$EVAL_NAME)
+(cd 10-extraction; ./gradlew b --parallel --max-workers=$NB_PROC -Deval_name=$EVAL_NAME)
+(cd 20-training; ./gradlew b --parallel --max-workers=$NB_PROC -Deval_name=$EVAL_NAME)
+(cd 30-synthesis; ./gradlew b --parallel --max-workers=$NB_PROC -Deval_name=$EVAL_NAME)
+(cd 40-analysis; ./gradlew b --parallel --max-workers=$NB_PROC -Deval_name=$EVAL_NAME)
 ```
 
 
