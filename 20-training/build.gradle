@@ -103,6 +103,8 @@ task configuration() {
     }
     if (config.settings.training.kind == "dnn") {
         config.settings.dnn.qconf = DataFileFinder.getFilePath(config.settings.dnn.qconf)
+    } else {
+        config.settings.dnn.qconf = null
     }
 
     ext.list_basenames = config.data.list_files
