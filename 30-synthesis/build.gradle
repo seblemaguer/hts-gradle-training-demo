@@ -55,11 +55,14 @@ import java.util.regex.Pattern
  ***
  ***************************************************************************************************/
 def slurper = new JsonSlurper()
-def config_file =  new File("../training/build/raw/config.json")
+def config_file =  new File("../20-training/build/raw/config.json")
 def config = slurper.parseText( config_file.text )
 
-def list_file = new File(DataFileFinder.getFilePath("list_test"))
+def list_file = file(System.getProperty("list_file"))
+def lab_dir = System.getProperty("lab_dir")
 
+logging.captureStandardOutput LogLevel.INFO
+logging.captureStandardError LogLevel.ERROR
 
 /***************************************************************************************************
  ***
@@ -84,14 +87,13 @@ task prepareSynthesis(dependsOn: bootstrapTongueModel) {
     doLast {
         scp.text = ""
         list_file.eachLine { basename ->
-            def rootPath = DataFileFinder.getFilePath(config.data.full_lab_dir)
-            if (rootPath.startsWith("/"))
+            if (lab_dir.startsWith("/"))
             {
-                scp << rootPath
+                scp << lab_dir
             }
             else
             {
-                scp << "$rootProject.projectDir/$rootPath"
+                scp << "$rootProject.projectDir/${lab_dir}"
             }
 
             scp << "/${basename}.lab" << "\n"
@@ -114,8 +116,8 @@ task synthesize(dependsOn:prepareSynthesis) {
         exec {
             workingDir "utils/pyhts/"
             commandLine "python3", "-u", "-B", "synth.py", "-r", "-P", "20",
-            "-c", "$rootProject.projectDir/$config_file", // "-v",
-            "-s", scp, output_path
+            "-c", "$rootProject.projectDir/$config_file", "-v",
+            "-S", "$rootProject.projectDir/../utils/straight/src", "-s", scp, output_path
         }
     }
 }
@@ -154,7 +156,7 @@ task synthesizeImposedDuration(dependsOn:prepareSynthesis) {
             workingDir "utils/pyhts/"
             commandLine "python3", "synth.py", "-r", "-D", "-P", "20",
             "-c", "$rootProject.projectDir/$config_file", // "-v",
-            "-s", scp, output_path
+            "-S", "$rootProject.projectDir/../utils/straight/src", "-s", scp, output_path
         }
     }
 }
