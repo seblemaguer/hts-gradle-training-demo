@@ -112,58 +112,13 @@
                 }
             ]
         },
-        "ffo": {
-            "streams": [
-                {
-                    "coeffDir": "mgc",
-                    "winfiles": [
-                        "win/mgc.win1",
-                        "win/mgc.win2",
-                        "win/mgc.win3"],
-                    "order": 49,
-                    "stats": true,
-                    "kind": "mgc",
-                    "name": "mgc"
-                },
-                {
-                    "coeffDir": "vuv",
-                    "winfiles": ["win/lf0.win1"],
-                    "order": 0,
-                    "stats": false,
-                    "kind": "vuv",
-                    "name": "vuv"
-                },
-                {
-                    "coeffDir": "interpolated_lf0",
-                    "winfiles": [
-                        "win/lf0.win1",
-                        "win/lf0.win2",
-                        "win/lf0.win3"],
-                    "order": 0,
-                    "stats": true,
-                    "kind": "lf0",
-                    "name": "lf0"
-                },
-                {
-                    "coeffDir": "bap",
-                    "winfiles": [
-                        "win/bap.win1",
-                        "win/bap.win2",
-                        "win/bap.win3"],
-                    "order": 24,
-                    "stats": true,
-                    "kind": "bap",
-                    "name": "bap"
-                }
-            ]
-        },
         "global": {
             "nb_emitting_states": 5
         }
     },
     "settings": {
         "synthesis": {
-            "generator": "dnn",
+            "generator": "default",
             "renderer": "straight",
             "maxemiter": 20,
             "tree_ext": "inf",
@@ -182,7 +137,7 @@
             }
         },
         "extraction": {
-            "kind":"straightdnn"
+            "kind":"straight"
         },
         "daem": {
             "alpha": 1.0,
@@ -196,7 +151,7 @@
             "beam": "1500 100 5000",
             "nIte": 1,
             "nb_clustering":2,
-            "kind":"dnn"
+            "kind":"hmm"
         },
         "dnn": {
             "qconf": "questions/en_US.talk.conf",
