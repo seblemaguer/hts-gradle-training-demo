@@ -1,25 +1,2 @@
-import groovy.json.* // To load the JSON configuration file
-import java.util.*
-
-// Specific to this architecture (FIXME: maybe generalize it ?)
 def eval_name = System.getProperty("eval_name")
 rootProject.name = "$eval_name-analysis"
-
-
-def slurper = new JsonSlurper()
-def config_file =  new File("../training/build/raw/config.json") // FIXME: architecture hardcoded
-def config = slurper.parseText( config_file.text )
-
-// Adapt pathes
-DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
-if (config.data.project_dir) {
-    DataFileFinder.project_path = config.data.project_dir
-}
-
-/*
-def list_file = new File(DataFileFinder.getFilePath("list_test"))
-// Generate one project per test file
-(new File(DataFileFinder.getFilePath("list_test"))).eachLine{ basename ->
-    include "$basename"
-}
-*/
