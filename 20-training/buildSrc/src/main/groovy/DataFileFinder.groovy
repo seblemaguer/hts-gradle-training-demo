@@ -4,22 +4,22 @@ import groovy.json.* // To load the JSON configuration file
 
 public class DataFileFinder {
     def static project_path
-    
-    static String getFilePath(String filename) {
+
+    static File getFilePath(String filename) {
         // Absolute path
         if (filename.startsWith("/")){
-            return filename
+            return new File(filename)
         }
 
-        
-        return project_path + "/" + filename
+
+        return new File(project_path, filename)
     }
-    
-    static String getFilePath(String filename, String ext) {
+
+    static File getFilePath(String filename, String ext) {
         if (ext.startsWith(".")){
             return getFilePath(filename + ext)
         }
-        
+
         return getFilePath(filename + "." + ext)
     }
 }

@@ -104,6 +104,7 @@ task configuration() {
     if (config.settings.training.kind == "dnn") {
         config.settings.dnn.qconf = DataFileFinder.getFilePath(config.settings.dnn.qconf)
     } else {
+        config.settings.dnn = [:]
         config.settings.dnn.qconf = null
     }
 
@@ -148,5 +149,5 @@ apply plugin: "de.dfki.mary.htsvoicebuilding"
 // Link voice building to coefficient packing
 configurationVoiceBuilding.dependsOn "pack"
 
-// Link buid to the run method
-build.dependsOn "run"
+// Link buid to the train method
+build.dependsOn "train"
