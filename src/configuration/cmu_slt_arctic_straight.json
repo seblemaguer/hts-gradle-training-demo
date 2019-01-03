@@ -176,7 +176,7 @@
         "samplerate": 48000
     },
     "data": {
-        "project_dir": "../src/cmu_slt_arctic",
+        "project_dir": "src/cmu_slt_arctic",
         "question_file_gv": "questions/questions_utt.hed",
         "question_file": "questions/questions.hed",
         "full_lab_dir": "labels/full",

@@ -161,75 +161,75 @@ if (System.getProperty("eval_name")) {
         destFile = file("$buildDir/list_training")
     }
 
-    // /***************************************************************************************
-    //  ** Acoustic / Training part
-    //  ***************************************************************************************/
-    // ext {
-    //     config_file = new File("src/configuration/" + System.getProperty("eval_name") + ".json")
-    // }
-    // def slurper = new JsonSlurperClassic()
-    // def config = slurper.parseText( config_file.text )
+    /***************************************************************************************
+     ** Acoustic / Training part
+     ***************************************************************************************/
+    ext {
+        config_file = new File("src/configuration/" + System.getProperty("eval_name") + ".json")
+    }
+    def slurper = new JsonSlurperClassic()
+    def config = slurper.parseText( config_file.text )
 
 
-    // task configuration() {
+    task configuration() {
 
-    //     // Prepare data file finder helper
-    //     DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
-    //     if (config.data.project_dir) {
-    //         DataFileFinder.project_path = config.data.project_dir
-    //     }
+        // Prepare data file finder helper
+        DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
+        if (config.data.project_dir) {
+            DataFileFinder.project_path = config.data.project_dir
+        }
 
-    //     // Deal with lists
-    //     config.data.list_files = generateFileList.destFile.getAsFile().get()
-    //     ext.list_basenames = generateFileList.destFile.getAsFile().get()
+        // Deal with lists
+        config.data.list_files = generateFileList.destFile.getAsFile().get()
+        ext.list_basenames = generateFileList.destFile.getAsFile().get()
 
-    //     // Data extraction directory
-    //     ext.wav_dir = file("$buildDir/unpacked/cmu_us_slt_arctic/wav")
-    //     ext.kind = config.settings.extraction.kind
+        // Data extraction directory
+        ext.wav_dir = file("$buildDir/unpacked/cmu_us_slt_arctic/wav")
+        ext.kind = config.settings.extraction.kind
 
-    //     // Extraction information
-    //     config.models.cmp.streams.each { stream ->
-    //         stream.coeffDir = DataFileFinder.getFilePath("$buildDir/${stream.kind}")
-    //         def tmp = []
-    //         stream.winfiles.each { win_file ->
-    //             tmp.add(DataFileFinder.getFilePath("$win_file"))
-    //         }
-    //         stream.winfiles = tmp
-    //     }
+        // Extraction information
+        config.models.cmp.streams.each { stream ->
+            stream.coeffDir = DataFileFinder.getFilePath("$buildDir/${stream.kind}")
+            def tmp = []
+            stream.winfiles.each { win_file ->
+                tmp.add(DataFileFinder.getFilePath("$win_file"))
+            }
+            stream.winfiles = tmp
+        }
 
-    //     // // FIXME: is it really useful?
-    //     // if (config.models.ffo) {
-    //     //     config.models.ffo.streams.each { stream ->
-    //     //         stream.coeffDir = DataFileFinder.getFilePath("$buildDir/${stream.kind}")
-    //     //     }
-    //     // }
+        // // FIXME: is it really useful?
+        // if (config.models.ffo) {
+        //     config.models.ffo.streams.each { stream ->
+        //         stream.coeffDir = DataFileFinder.getFilePath("$buildDir/${stream.kind}")
+        //     }
+        // }
 
-    //     // HTS needed question files
-    //     config.data.question_file    = DataFileFinder.getFilePath(config.data.question_file)
-    //     config.data.question_file_gv = DataFileFinder.getFilePath(config.data.question_file_gv)
+        // HTS needed question files
+        config.data.question_file    = DataFileFinder.getFilePath(config.data.question_file)
+        config.data.question_file_gv = DataFileFinder.getFilePath(config.data.question_file_gv)
 
-    //     // Label files (FIXME: removed soon)
-    //     config.data.mono_lab_dir = generateHTSLabels.monoLabDir.getAsFile().get()
-    //     config.data.full_lab_dir = generateHTSLabels.fullLabDir.getAsFile().get()
-    //     if (config.gv.hasProperty("label_dir")) {
-    //         config.gv.label_dir = DataFileFinder.getFilePath(config.gv.label_dir)
-    //     }
+        // Label files (FIXME: removed soon)
+        config.data.mono_lab_dir = generateHTSLabels.monoLabDir.getAsFile().get()
+        config.data.full_lab_dir = generateHTSLabels.fullLabDir.getAsFile().get()
+        if (config.gv.hasProperty("label_dir")) {
+            config.gv.label_dir = DataFileFinder.getFilePath(config.gv.label_dir)
+        }
 
-    //     // DNN configuration part
-    //     if (config.settings.training.kind == "dnn") {
-    //         config.settings.dnn.qconf = DataFileFinder.getFilePath(config.settings.dnn.qconf)
-    //     } else {
-    //         config.settings.dnn = [:]
-    //         config.settings.dnn.qconf = null
-    //     }
+        // DNN configuration part
+        if (config.settings.training.kind == "dnn") {
+            config.settings.dnn.qconf = DataFileFinder.getFilePath(config.settings.dnn.qconf)
+        } else {
+            config.settings.dnn = [:]
+            config.settings.dnn.qconf = null
+        }
 
-    //     ext.user_configuration = config
-    // }
+        ext.user_configuration = config
+    }
 
 
-    // apply plugin: "de.dfki.mary.coefficientextraction"
-    // apply plugin: "de.dfki.mary.htspacking"
-    // apply plugin: "de.dfki.mary.htsvoicebuilding"
+    apply plugin: "de.dfki.mary.coefficientextraction"
+    apply plugin: "de.dfki.mary.htspacking"
+    apply plugin: "de.dfki.mary.htsvoicebuilding"
 
 
     // // generateCMP.dependsOn "extract"
@@ -237,11 +237,11 @@ if (System.getProperty("eval_name")) {
     // //     generateFFO.dependsOn "extract"
     // // }
 
-    // // Link voice building to coefficient packing
-    // generateSCPFile.data_directory = generateCMP.cmp_directory
+    // Link voice building to coefficient packing
+    generateSCPFile.data_directory = generateCMP.cmp_directory
 
-    // /***************************************************************************************
-    //  ** Entry point
-    //  ***************************************************************************************/
-    // build.dependsOn "train"
+    /***************************************************************************************
+     ** Entry point
+     ***************************************************************************************/
+    build.dependsOn "generateSCPFile"
 }
