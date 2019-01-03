@@ -1,2 +1,0 @@
-def eval_name = System.getProperty("eval_name")
-rootProject.name = "${eval_name}-synthesis"

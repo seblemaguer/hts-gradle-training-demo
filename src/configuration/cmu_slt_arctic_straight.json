@@ -194,6 +194,6 @@
         "festival":false
     },
     "path": {
-        "straight" : "../utils/straight/src"
+        "straight" : "utils/straight/src"
     }
 }
