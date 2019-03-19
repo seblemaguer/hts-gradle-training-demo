@@ -1,6 +1,52 @@
+import groovy.json.* // To load the JSON configuration file
+
 def eval_name = System.getProperty("eval_name")
 if (eval_name) {
     rootProject.name = eval_name
+
+    /***************************************************************************************
+     ** Configuration
+     ***************************************************************************************/
+    def slurper = new JsonSlurperClassic()
+    def config = slurper.parseText( new File("src/configuration/" + System.getProperty("eval_name") + ".json").text )
+
+    // Prepare data file finder helper
+    DataFileFinder.project_path = new File(getClass().protectionDomain.codeSource.location.path).parent
+    if (config.data.project_dir) {
+        DataFileFinder.project_path = config.data.project_dir
+    }
+
+    // Data extraction directory
+    config.data.text_dir = DataFileFinder.getFilePath(config.data.text_dir)
+    config.data.wav_dir = DataFileFinder.getFilePath(config.data.wav_dir)
+
+    // Extraction information
+    for (int s=0; s<config.models.cmp.streams.size(); s++) {
+        config.models.cmp.streams[s].coeffDir = DataFileFinder.getFilePath("${rootProject.projectDir}/build/${config.models.cmp.streams[s].kind}")
+        for (int w=0; w<config.models.cmp.streams[s].winfiles.size(); w++) {
+            config.models.cmp.streams[s].winfiles[w] = DataFileFinder.getFilePath(config.models.cmp.streams[s].winfiles[w])
+        }
+    }
+
+    // HTS needed question files
+    config.data.question_file    = DataFileFinder.getFilePath(config.data.question_file)
+    config.data.question_file_gv = DataFileFinder.getFilePath(config.data.question_file_gv)
+
+    // Label files (FIXME: removed soon)
+    if (config.gv.hasProperty("label_dir")) {
+        config.gv.label_dir = DataFileFinder.getFilePath(config.gv.label_dir)
+    }
+
+    // DNN configuration part
+    if (config.settings.training.kind == "dnn") {
+        config.settings.dnn.qconf = DataFileFinder.getFilePath(config.settings.dnn.qconf)
+    } else {
+        config.settings.dnn = [:]
+        config.settings.dnn.qconf = null
+    }
+
+    // Finally define globally the voice building configuration
+    gradle.ext.vb_configuration = config
 } else {
     logger.error("No configuration file given")
 }
