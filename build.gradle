@@ -59,16 +59,12 @@ repositories {
     }
 }
 
-
 /***************************************************************************************
  ** Requires
  ***************************************************************************************/
 import marytts.runutils.Mary
 
 if (System.getProperty("eval_name")) {
-
-    // ext.vb_configuration = gradle.vb_configuration
-
     /***************************************************************************************
      **  Mary startup (FIXME: see for the shutdown also!)
      ***************************************************************************************/
@@ -103,9 +99,10 @@ if (System.getProperty("eval_name")) {
     apply plugin: "de.dfki.mary.htspacking"
 
     // extraction => packing
-    generateCMP.origin_directory = file("src/cmu_slt_arctic/wav")
+    generateCMP.origin_directory = gradle.vb_configuration.data.wav_dir
     generateCMP.dependsOn "extract"
     if (gradle.vb_configuration.models.ffo) {
+        generateFFO.origin_directory = gradle.vb_configuration.data.wav_dir
         generateFFO.dependsOn "extract"
     }
 
@@ -116,6 +113,13 @@ if (System.getProperty("eval_name")) {
     // Apply plugins
     apply plugin: "de.dfki.mary.htsvoicebuilding"
 
+    // Linking NLP to training
+    generateFullMLF.lab_dir = generateHTSLabels.fullLabDir
+    generateFullList.lab_dir = generateHTSLabels.fullLabDir
+    generateMonoMLF.lab_dir = generateHTSLabels.monoLabDir
+    generateMonophoneList.lab_dir = generateHTSLabels.monoLabDir
+    generateGVLabFiles.full_lab_dir = generateHTSLabels.fullLabDir
+    generateSCPFile.label_directory = generateHTSLabels.fullLabDir
 
     // Linking NLP to training
     generateFullMLF.lab_dir = generateHTSLabels.fullLabDir
@@ -127,6 +131,7 @@ if (System.getProperty("eval_name")) {
 
     // Linking acoustic parameters to training
     generateSCPFile.data_directory = generateCMP.cmp_directory
+    generateDNNSCP.ffo_dir = generateFFO.ffo_dir
 
     /***************************************************************************************
      ** Entry point

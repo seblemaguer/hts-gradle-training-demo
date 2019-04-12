@@ -22,9 +22,18 @@ if (eval_name) {
 
     // Extraction information
     for (int s=0; s<config.models.cmp.streams.size(); s++) {
-        config.models.cmp.streams[s].coeffDir = DataFileFinder.getFilePath("${rootProject.projectDir}/build/${config.models.cmp.streams[s].kind}")
+        config.models.cmp.streams[s].coeffDir = DataFileFinder.getFilePath("${rootProject.projectDir}/build/${config.models.cmp.streams[s].coeffDir}") // FIXME: coeffDir is not a good way
         for (int w=0; w<config.models.cmp.streams[s].winfiles.size(); w++) {
             config.models.cmp.streams[s].winfiles[w] = DataFileFinder.getFilePath(config.models.cmp.streams[s].winfiles[w])
+        }
+    }
+
+    if (config.settings.training.kind == "dnn") {
+        for (int s=0; s<config.models.ffo.streams.size(); s++) {
+            config.models.ffo.streams[s].coeffDir = DataFileFinder.getFilePath("${rootProject.projectDir}/build/${config.models.ffo.streams[s].coeffDir}") // FIXME: coeffDir is not a good way!
+                for (int w=0; w<config.models.ffo.streams[s].winfiles.size(); w++) {
+                    config.models.ffo.streams[s].winfiles[w] = DataFileFinder.getFilePath(config.models.ffo.streams[s].winfiles[w])
+                }
         }
     }
 
