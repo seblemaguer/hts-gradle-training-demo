@@ -187,11 +187,9 @@
         "list_files": "list_training",
         "scp": "scp/train.scp"
     },
-    "output": {
-        "raw":true,
-        "hts_engine":false,
-        "marytts":false,
-        "festival":false
+    "export": {
+        "raw": {"enabled": true},
+        "hts_engine": {"enabled": true}
     },
     "path": {
         "straight" : "utils/straight/src"

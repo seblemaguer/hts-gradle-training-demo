@@ -221,7 +221,7 @@
         "samplerate": 48000
     },
     "data": {
-        "project_dir": "../src/cmu_slt_arctic",
+        "project_dir": "src/cmu_slt_arctic",
         "question_file_gv": "questions/questions_utt.hed",
         "question_file": "questions/questions.hed",
         "full_lab_dir": "labels/full",
@@ -232,13 +232,11 @@
         "list_files": "list_training",
         "scp": "scp/train.scp"
     },
-    "output": {
-        "raw":true,
-        "hts_engine":false,
-        "marytts":false,
-        "festival":false
+    "export": {
+        "raw": {"enabled": true},
+        "hts_engine": {"enabled": true}
     },
     "path": {
-        "straight" : "../utils/straight/src"
+        "straight" : "utils/straight/src"
     }
 }
