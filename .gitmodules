@@ -1,3 +1,0 @@
-[submodule "30-synthesis/utils/pyhts"]
-	path = 30-synthesis/utils/pyhts
-	url = git@github.com:seblemaguer/pyhts.git
