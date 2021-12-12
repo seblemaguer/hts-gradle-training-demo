@@ -1,0 +1,201 @@
+{
+    "gv": {
+        "cdgv": true,
+        "nosil": true,
+        "silences": [
+            "pau",
+            "h#",
+            "brth",
+            "start",
+            "end",
+            "spause",
+            "insp"
+        ],
+        "use": true
+    },
+    "models": {
+        "dur": {
+            "is_msd": false,
+            "initvar": 10.0,
+            "initmean": 3.0,
+            "nblk": 1,
+            "gam": 0,
+            "mocc": 5.0,
+            "mdlf": 1.0,
+            "thr": "000",
+            "vflr": 0.01
+        },
+        "cmp": {
+            "streams": [
+                {
+                    "coeffDir": "mgc",
+                    "winfiles": [
+                        "win/mgc.win1",
+                        "win/mgc.win2",
+                        "win/mgc.win3"],
+                    "gv": {
+                        "gam": "000",
+                        "mdlf": 1.0,
+                        "thr": "000"
+                    },
+                    "parameters" : {
+                        "use_lngain": false,
+                        "gamma":0,
+                        "pf_mcp":1.4,
+                        "pf_lsp":0.7,
+                        "implen":4096,
+                        "fftlen":2048
+                    },
+                    "is_msd": false,
+                    "weight": 1,
+                    "nblk": 3,
+                    "gam": 0,
+                    "order": 49,
+                    "mocc": 10.0,
+                    "mdlf": 1.0,
+                    "thr": "000",
+                    "vflr": 0.01,
+                    "kind": "mgc",
+                    "name": "mgc"
+                },
+                {
+                    "coeffDir": "lf0",
+                    "winfiles": [
+                        "win/lf0.win1",
+                        "win/lf0.win2",
+                        "win/lf0.win3"],
+                    "gv": {
+                        "gam": "000",
+                        "mdlf": 1.0,
+                        "thr": "000"
+                    },
+                    "parameters" : {
+                        "lower_f0":60,
+                        "upper_f0":300
+                    },
+                    "is_msd": true,
+                    "weight": 1,
+                    "nblk": 1,
+                    "gam": 0,
+                    "order": 0,
+                    "mocc": 10.0,
+                    "mdlf": 1.0,
+                    "thr": "000",
+                    "vflr": 0.01,
+                    "kind": "lf0",
+                    "name": "lf0"
+                },
+                {
+                    "coeffDir": "bap",
+                    "winfiles": [
+                        "win/bap.win1",
+                        "win/bap.win2",
+                        "win/bap.win3"],
+                    "gv": {
+                        "gam": "000",
+                        "mdlf": 1.0,
+                        "thr": "000"
+                    },
+                    "parameters" : {
+                        "fftlen":2048
+                    },
+                    "is_msd": false,
+                    "weight": 0,
+                    "nblk": 3,
+                    "gam": 0,
+                    "order": 24,
+                    "mocc": 10.0,
+                    "mdlf": 1.0,
+                    "thr": "000",
+                    "vflr": 0.01,
+                    "kind": "bap",
+                    "name": "bap"
+                }
+            ]
+        },
+        "global": {
+            "nb_emitting_states": 5
+        }
+    },
+    "settings": {
+        "synthesis": {
+            "generator": "default",
+            "renderer": "world",
+            "maxemiter": 20,
+            "tree_ext": "inf",
+            "gv" : {
+                "optkind": "NEWTON",
+                "hmmweight": 1.0,
+                "gvweight": 1.0,
+                "gvepsilon": 0.0001,
+                "maxgviter": 50,
+                "usegv": 1,
+                "stepdec": 0.5,
+                "stepinc": 1.2,
+                "stepinit": 1.0,
+                "mineucnorm": 0.01,
+                "emepsilon": 0.0001
+            }
+        },
+        "extraction": {
+            "kind":"world"
+        },
+        "daem": {
+            "alpha": 1.0,
+            "nIte": 10,
+            "use": false
+        },
+        "training": {
+            "wf": 3,
+            "mindur": 5,
+            "maxdev": 10,
+            "beam": "1500 100 5000",
+            "nIte": 1,
+            "nb_clustering":2,
+            "kind":"hmm"
+        },
+        "dnn": {
+            "qconf": "questions/en_US.talk.conf",
+            "num_hidden_units": "[1024, 1024, 1024]",
+            "hidden_activation": "Sigmoid",
+            "optimizer": "Adam",
+            "learning_rate": 0.001,
+            "keep_prob": 0.5,
+            "use_queue": 0,
+            "queue_size": 5000,
+            "batch_size": 256,
+            "num_epochs": 50,
+            "num_threads": 0,
+            "random_seed": 12345,
+            "num_models_to_keep": 5,
+            "log_interval": 100,
+            "save_interval": 5000
+        }
+    },
+    "signal": {
+        "frameshift": 5,
+        "samplerate": 48000
+    },
+    "data": {
+        "project_dir": "src/cmu_slt_arctic",
+        "question_file_gv": "questions/questions_utt.hed",
+        "question_file": "questions/questions.hed",
+        "full_lab_dir": "labels/full",
+        "mono_lab_dir": "labels/mono",
+        "text_dir":"text",
+        "alignment_dir":"lab",
+        "locale": "en_US",
+        "wav_dir": "wav",
+        "list_files": "list_training",
+        "list_basenames": "list_training",
+        "scp": "scp/train.scp"
+    },
+    "export": {
+        "raw": {"enabled": true},
+        "hts_engine": {"enabled": true}
+    },
+    "path": {
+        "straight" : "utils/straight/src"
+    },
+    "locale": "en_US",
+}
