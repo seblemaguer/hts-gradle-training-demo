@@ -16,7 +16,7 @@ buildscript {
     dependencies {
         classpath group: "com.googlecode.json-simple", name:"json-simple", version:"1.1"
 
-        classpath group: "de.dfki.mary", name: "marytts-common", version: "6.0.1-SNAPSHOT"
+        classpath group: "de.dfki.mary", name: "marytts-runtime", version: "6.0.2-SNAPSHOT"
 
         // Label part
         classpath group: "de.dfki.mary", name: "gradle-marytts-dict-extraction", version: "0.1-SNAPSHOT"
@@ -79,6 +79,9 @@ import marytts.runutils.Mary
 
 if (System.getProperty("eval_name")) {
 
+    // FIXME: why do we need that !
+    project.ext.set("vb_configuration", gradle.ext.vb_configuration)
+
     /***************************************************************************************
      ** NLP part
      ***************************************************************************************/
@@ -109,10 +112,10 @@ if (System.getProperty("eval_name")) {
     apply plugin: "de.dfki.mary.htspacking"
 
     // extraction => packing
-    generateCMP.origin_directory = gradle.vb_configuration.data.wav_dir
+    generateCMP.list_basenames = gradle.vb_configuration.data.list_basenames
     generateCMP.dependsOn "extract"
     if (gradle.vb_configuration.models.ffo) {
-        generateFFO.origin_directory = gradle.vb_configuration.data.wav_dir
+        generateFFO.list_basenames = gradle.vb_configuration.data.list_basenames
         generateFFO.dependsOn "extract"
     }
 

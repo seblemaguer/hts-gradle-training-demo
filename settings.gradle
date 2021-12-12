@@ -17,6 +17,7 @@ if (eval_name) {
     }
 
     // Data extraction directory
+    config.data.list_basenames =  DataFileFinder.getFilePath(config.data.list_basenames)
     config.data.text_dir = DataFileFinder.getFilePath(config.data.text_dir)
     config.data.wav_dir = DataFileFinder.getFilePath(config.data.wav_dir)
 
